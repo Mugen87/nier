@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { BoundingSphere, Vehicle, StateMachine } from './lib/yuka.module.js';
+import { BoundingSphere, Vehicle, StateMachine } from '../lib/yuka.module.js';
 
 class Pursuer extends Vehicle {
 

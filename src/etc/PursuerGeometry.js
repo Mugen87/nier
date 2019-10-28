@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import * as THREE from './lib/three.module.js';
+import * as THREE from '../lib/three.module.js';
 
 class PursuerGeometry extends THREE.BufferGeometry {
 

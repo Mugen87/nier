@@ -1,5 +1,5 @@
-import { State, Vector3 } from './lib/yuka.module.js';
-import { EnemyProjectile } from './EnemyProjectile.js';
+import { State, Vector3 } from '../lib/yuka.module.js';
+import { EnemyProjectile } from '../entities/EnemyProjectile.js';
 
 const direction = new Vector3();
 const target = new Vector3();

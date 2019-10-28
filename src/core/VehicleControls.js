@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { EventDispatcher, Vector3, Logger, MathUtils } from './lib/yuka.module.js';
+import { EventDispatcher, Vector3, Logger, MathUtils } from '../lib/yuka.module.js';
 
 const direction = new Vector3();
 const target = new Vector3();

@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { AABB, GameEntity, OBB, Vector3 } from './lib/yuka.module.js';
+import { AABB, GameEntity, OBB, Vector3 } from '../lib/yuka.module.js';
 
 class Obstacle extends GameEntity {
 

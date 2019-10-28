@@ -1,4 +1,4 @@
-import { PursuitBehavior, State } from './lib/yuka.module.js';
+import { PursuitBehavior, State } from '../lib/yuka.module.js';
 
 class MovementPattern extends State {
 

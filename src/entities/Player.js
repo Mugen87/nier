@@ -2,10 +2,10 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { AABB, MovingEntity, MathUtils, OBB, Ray, Vector3 } from './lib/yuka.module.js';
+import { AABB, MovingEntity, MathUtils, OBB, Ray, Vector3 } from '../lib/yuka.module.js';
 
+import { Particle, ParticleSystem } from '../core/ParticleSystem.js';
 import { PlayerProjectile } from './PlayerProjectile.js';
-import { Particle, ParticleSystem } from './ParticleSystem.js';
 
 const aabb = new AABB();
 const direction = new Vector3();

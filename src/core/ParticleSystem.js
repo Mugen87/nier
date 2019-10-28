@@ -2,10 +2,10 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { Vector3 } from './lib/yuka.module.js';
-import * as THREE from './lib/three.module.js';
+import { Vector3 } from '../lib/yuka.module.js';
+import * as THREE from '../lib/three.module.js';
 
-import { ParticleShader } from './Shaders.js';
+import { ParticleShader } from '../etc/Shaders.js';
 
 class ParticleSystem {
 

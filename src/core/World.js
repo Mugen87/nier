@@ -2,18 +2,19 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import * as YUKA from './lib/yuka.module.js';
-import * as THREE from './lib/three.module.js';
+import * as YUKA from '../lib/yuka.module.js';
+import * as THREE from '../lib/three.module.js';
 
-import { Player } from './Player.js';
-import { Guard } from './Guard.js';
-import { Pursuer } from './Pursuer.js';
-import { PursuerGeometry } from './PursuerGeometry.js';
-import { VehicleControls } from './VehicleControls.js';
-import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, PursuitBehaviorMovementPattern } from './MovementPatterns.js';
-import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from './CombatPatterns.js';
 import { AssetManager } from './AssetManager.js';
-import { ProtectionShader, HitShader } from './Shaders.js';
+import { VehicleControls } from './VehicleControls.js';
+
+import { Player } from '../entities/Player.js';
+import { Guard } from '../entities/Guard.js';
+import { Pursuer } from '../entities/Pursuer.js';
+import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, PursuitBehaviorMovementPattern } from '../patterns/MovementPatterns.js';
+import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from '../patterns/CombatPatterns.js';
+import { ProtectionShader, HitShader } from '../etc/Shaders.js';
+import { PursuerGeometry } from '../etc/PursuerGeometry.js';
 
 const toVector = new YUKA.Vector3();
 const displacement = new YUKA.Vector3();

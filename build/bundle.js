@@ -62835,31 +62835,105 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
-	class Projectile extends MovingEntity {
+	class AssetManager {
 
-		constructor( owner = null ) {
+		constructor() {
 
-			super();
+			this.loadingManager = new LoadingManager();
 
-			this.owner = owner;
+			this.audioLoader = new AudioLoader( this.loadingManager );
+
+			this.listener = new AudioListener();
+
+			this.audios = new Map();
 
 		}
 
-		update( delta ) {
+		init() {
 
-			super.update( delta );
+			this._loadAudios();
 
-			// remove the projectile when it leaves the game area
+			const loadingManager = this.loadingManager;
 
-			const world = this.owner.world;
+			return new Promise( ( resolve ) => {
 
-			if ( this.position.x > world.field.x || this.position.x < - world.field.x ||
-				this.position.z > world.field.z || this.position.z < - world.field.z ) {
+				loadingManager.onLoad = () => {
 
-				world.removeProjectile( this );
-				return;
+					setTimeout( () => {
 
-			}
+						resolve();
+
+					}, 100 );
+
+				};
+
+			} );
+
+		}
+
+		cloneAudio( id ) {
+
+			const source = this.audios.get( id );
+
+			const audio = new source.constructor( source.listener );
+			audio.buffer = source.buffer;
+			audio.setRefDistance( source.getRefDistance() );
+
+			return audio;
+
+		}
+
+		_loadAudios() {
+
+			const audioLoader = this.audioLoader;
+			const audios = this.audios;
+			const listener = this.listener;
+
+			const refDistance = 20;
+
+			const playerShot = new PositionalAudio( listener );
+			playerShot.setRefDistance( refDistance );
+			const playerHit = new PositionalAudio( listener );
+			playerHit.setRefDistance( refDistance );
+			const playerExplode = new PositionalAudio( listener );
+			playerExplode.setRefDistance( refDistance );
+			const enemyShot = new PositionalAudio( listener );
+			enemyShot.setRefDistance( refDistance );
+			const enemyHit = new PositionalAudio( listener );
+			enemyHit.setRefDistance( refDistance );
+			const coreExplode = new PositionalAudio( listener );
+			coreExplode.setRefDistance( refDistance );
+			const coreShieldHit = new PositionalAudio( listener );
+			coreShieldHit.setRefDistance( refDistance );
+			const coreShieldDestroyed = new PositionalAudio( listener );
+			coreShieldDestroyed.setRefDistance( refDistance );
+			const pursuerExplode = new PositionalAudio( listener );
+			pursuerExplode.setRefDistance( refDistance );
+
+			const buttonClick = new Audio( listener );
+			buttonClick.setVolume( 0.5 );
+
+			audioLoader.load( './audio/playerShot.ogg', buffer => playerShot.setBuffer( buffer ) );
+			audioLoader.load( './audio/playerHit.ogg', buffer => playerHit.setBuffer( buffer ) );
+			audioLoader.load( './audio/playerExplode.ogg', buffer => playerExplode.setBuffer( buffer ) );
+			audioLoader.load( './audio/enemyShot.ogg', buffer => enemyShot.setBuffer( buffer ) );
+			audioLoader.load( './audio/enemyHit.ogg', buffer => enemyHit.setBuffer( buffer ) );
+			audioLoader.load( './audio/coreExplode.ogg', buffer => coreExplode.setBuffer( buffer ) );
+			audioLoader.load( './audio/coreShieldHit.ogg', buffer => coreShieldHit.setBuffer( buffer ) );
+			audioLoader.load( './audio/coreShieldDestroyed.ogg', buffer => coreShieldDestroyed.setBuffer( buffer ) );
+			audioLoader.load( './audio/pursuerExplode.ogg', buffer => pursuerExplode.setBuffer( buffer ) );
+			audioLoader.load( './audio/buttonClick.ogg', buffer => buttonClick.setBuffer( buffer ) );
+
+			audios.set( 'playerShot', playerShot );
+			audios.set( 'playerHit', playerHit );
+			audios.set( 'playerExplode', playerExplode );
+			audios.set( 'enemyShot', enemyShot );
+			audios.set( 'enemyHit', enemyHit );
+			audios.set( 'coreExplode', coreExplode );
+			audios.set( 'coreShieldHit', coreShieldHit );
+			audios.set( 'coreShieldDestroyed', coreShieldDestroyed );
+			audios.set( 'pursuerExplode', pursuerExplode );
+			audios.set( 'buttonClick', buttonClick );
 
 		}
 
@@ -62869,42 +62943,258 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
+	const direction$1 = new Vector3();
 	const target$2 = new Vector3();
 
-	class PlayerProjectile extends Projectile {
+	class VehicleControls extends EventDispatcher {
 
-		constructor( owner = null, direction ) {
+		constructor( owner = null, camera = null ) {
 
-			super( owner );
+			super();
 
-			this.boundingRadius = 0.5;
-			this.obb = new OBB();
+			this.owner = owner;
+			this.camera = camera;
 
-			this.maxSpeed = 20; // world units/seconds
+			this.cameraOffset = new Vector3( 0, 20, 10 );
+			this.cameraMovementSpeed = 2.5;
+			this.rotationSpeed = 0.005;
+			this.brakingForce = 10;
 
-			this.velocity.copy( direction ).multiplyScalar( this.maxSpeed );
-			this.position.copy( this.owner.position );
-			this.position.y = 0.5; // slightly raise the projectile
+			this.movementX = 0; // mouse left/right
+			this.movementY = - 1; // mouse up/down
 
-			target$2.copy( this.position ).add( this.velocity );
-			this.lookAt( target$2 ); // ensure GameEntity.rotation is up to date
+			this.input = {
+				forward: false,
+				backward: false,
+				right: false,
+				left: false,
+				mouseDown: false
+			};
 
-			// set half sizes and orientation of OBB once (since projectiles will not change their shape and trajectory)
+			this._mouseUpHandler = onMouseUp.bind( this );
+			this._mouseDownHandler = onMouseDown.bind( this );
+			this._mouseMoveHandler = onMouseMove.bind( this );
+			this._pointerlockChangeHandler = onPointerlockChange.bind( this );
+			this._pointerlockErrorHandler = onPointerlockError.bind( this );
+			this._keyDownHandler = onKeyDown.bind( this );
+			this._keyUpHandler = onKeyUp.bind( this );
 
-			this.obb.halfSizes.set( 0.1, 0.1, 0.5 );
-			this.obb.rotation.fromQuaternion( this.rotation );
+		}
 
-			this.isPlayerProjectile = true;
+		connect() {
+
+			document.addEventListener( 'mouseup', this._mouseUpHandler, false );
+			document.addEventListener( 'mousedown', this._mouseDownHandler, false );
+			document.addEventListener( 'mousemove', this._mouseMoveHandler, false );
+			document.addEventListener( 'pointerlockchange', this._pointerlockChangeHandler, false );
+			document.addEventListener( 'pointerlockerror', this._pointerlockErrorHandler, false );
+			document.addEventListener( 'keydown', this._keyDownHandler, false );
+			document.addEventListener( 'keyup', this._keyUpHandler, false );
+
+			document.body.requestPointerLock();
+
+		}
+
+		disconnect() {
+
+			document.removeEventListener( 'mouseup', this._mouseUpHandler, false );
+			document.removeEventListener( 'mousedown', this._mouseDownHandler, false );
+			document.removeEventListener( 'mousemove', this._mouseMoveHandler, false );
+			document.removeEventListener( 'pointerlockchange', this._pointerlockChangeHandler, false );
+			document.removeEventListener( 'pointerlockerror', this._pointerlockErrorHandler, false );
+			document.removeEventListener( 'keydown', this._keyDownHandler, false );
+			document.removeEventListener( 'keyup', this._keyUpHandler, false );
+
+		}
+
+		exit() {
+
+			document.exitPointerLock();
 
 		}
 
 		update( delta ) {
 
-			super.update( delta );
+			// update player position
 
-			// update OBB
+			const input = this.input;
 
-			this.obb.center.copy( this.position );
+			direction$1.z = Number( input.backward ) - Number( input.forward );
+			direction$1.x = Number( input.right ) - Number( input.left );
+			direction$1.normalize();
+
+			if ( direction$1.length() === 0 ) {
+
+				// brake
+
+				this.owner.velocity.x -= this.owner.velocity.x * this.brakingForce * delta;
+				this.owner.velocity.z -= this.owner.velocity.z * this.brakingForce * delta;
+
+			} else {
+
+				this.owner.velocity.add( direction$1 );
+
+			}
+
+			// update shooting
+
+			if ( this.input.mouseDown ) {
+
+				this.owner.shoot();
+
+			}
+
+			// update camera
+
+			const offsetX = ( this.camera.position.x - this.cameraOffset.x ) - this.owner.position.x;
+			const offsetZ = ( this.camera.position.z - this.cameraOffset.z ) - this.owner.position.z;
+
+			if ( offsetX !== 0 ) this.camera.position.x -= ( offsetX * delta * this.cameraMovementSpeed );
+			if ( offsetZ !== 0 ) this.camera.position.z -= ( offsetZ * delta * this.cameraMovementSpeed );
+
+		}
+
+		reset() {
+
+			this.input.forward = false;
+			this.input.backward = false;
+			this.input.left = false;
+			this.input.right = false;
+			this.input.mouseDown = false;
+
+		}
+
+		resetRotation() {
+
+			this.movementX = 0;
+			this.movementY = - 1;
+			this.owner.rotation.fromEuler( 0, Math.PI, 0 );
+
+		}
+
+		setPosition( x, y, z ) {
+
+			this.owner.position.set( x, y, z );
+
+			this.camera.position.set( x, y, z ).add( this.cameraOffset );
+			this.camera.lookAt( x, y, z );
+
+		}
+
+	}
+
+	// handler
+
+	function onMouseDown( event ) {
+
+		if ( event.which === 1 ) {
+
+			this.input.mouseDown = true;
+
+		}
+
+	}
+
+	function onMouseUp( event ) {
+
+		if ( event.which === 1 ) {
+
+			this.input.mouseDown = false;
+
+		}
+
+	}
+
+	function onMouseMove( event ) {
+
+		this.movementX += event.movementX * this.rotationSpeed;
+		this.movementY += event.movementY * this.rotationSpeed;
+
+		this.movementX = MathUtils.clamp( this.movementX, - 1, 1 );
+		this.movementY = MathUtils.clamp( this.movementY, - 1, 1 );
+
+		direction$1.set( this.movementX, 0, this.movementY ).normalize();
+		target$2.copy( this.owner.position ).add( direction$1 );
+
+		this.owner.lookAt( target$2 );
+
+	}
+
+	function onPointerlockChange() {
+
+		if ( document.pointerLockElement === document.body ) {
+
+			this.dispatchEvent( { type: 'lock' } );
+
+		} else {
+
+			this.disconnect();
+
+			this.reset();
+
+			this.dispatchEvent( { type: 'unlock' } );
+
+		}
+
+	}
+
+	function onPointerlockError() {
+
+		Logger.warn( 'YUKA.VehicleControls: Unable to use Pointer Lock API.' );
+
+	}
+
+	function onKeyDown( event ) {
+
+		switch ( event.keyCode ) {
+
+			case 38: // up
+			case 87: // w
+				this.input.forward = true;
+				break;
+
+			case 37: // left
+			case 65: // a
+				this.input.left = true;
+				break;
+
+			case 40: // down
+			case 83: // s
+				this.input.backward = true;
+				break;
+
+			case 39: // right
+			case 68: // d
+				this.input.right = true;
+				break;
+
+		}
+
+	}
+
+	function onKeyUp( event ) {
+
+		switch ( event.keyCode ) {
+
+			case 38: // up
+			case 87: // w
+				this.input.forward = false;
+				break;
+
+			case 37: // left
+			case 65: // a
+				this.input.left = false;
+				break;
+
+			case 40: // down
+			case 83: // s
+				this.input.backward = false;
+				break;
+
+			case 39: // right
+			case 68: // d
+				this.input.right = false;
+				break;
 
 		}
 
@@ -63214,8 +63504,87 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
+	class Projectile extends MovingEntity {
+
+		constructor( owner = null ) {
+
+			super();
+
+			this.owner = owner;
+
+		}
+
+		update( delta ) {
+
+			super.update( delta );
+
+			// remove the projectile when it leaves the game area
+
+			const world = this.owner.world;
+
+			if ( this.position.x > world.field.x || this.position.x < - world.field.x ||
+				this.position.z > world.field.z || this.position.z < - world.field.z ) {
+
+				world.removeProjectile( this );
+				return;
+
+			}
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
+	const target$3 = new Vector3();
+
+	class PlayerProjectile extends Projectile {
+
+		constructor( owner = null, direction ) {
+
+			super( owner );
+
+			this.boundingRadius = 0.5;
+			this.obb = new OBB();
+
+			this.maxSpeed = 20; // world units/seconds
+
+			this.velocity.copy( direction ).multiplyScalar( this.maxSpeed );
+			this.position.copy( this.owner.position );
+			this.position.y = 0.5; // slightly raise the projectile
+
+			target$3.copy( this.position ).add( this.velocity );
+			this.lookAt( target$3 ); // ensure GameEntity.rotation is up to date
+
+			// set half sizes and orientation of OBB once (since projectiles will not change their shape and trajectory)
+
+			this.obb.halfSizes.set( 0.1, 0.1, 0.5 );
+			this.obb.rotation.fromQuaternion( this.rotation );
+
+			this.isPlayerProjectile = true;
+
+		}
+
+		update( delta ) {
+
+			super.update( delta );
+
+			// update OBB
+
+			this.obb.center.copy( this.position );
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
 	const aabb$2 = new AABB();
-	const direction$1 = new Vector3();
+	const direction$2 = new Vector3();
 	const intersectionPoint$1 = new Vector3();
 	const intersectionNormal = new Vector3();
 	const ray$1 = new Ray();
@@ -63267,9 +63636,9 @@
 
 				this.lastShotTime = elapsedTime;
 
-				this.getDirection( direction$1 );
+				this.getDirection( direction$2 );
 
-				const projectile = new PlayerProjectile( this, direction$1 );
+				const projectile = new PlayerProjectile( this, direction$2 );
 
 				world.addProjectile( projectile );
 
@@ -63726,350 +64095,6 @@
 
 	}
 
-	/**
-	 * @author Mugen87 / https://github.com/Mugen87
-	 */
-
-	class PursuerGeometry extends BufferGeometry {
-
-		constructor() {
-
-			super();
-
-			const vertices = [];
-			const indices = [];
-
-			// top
-
-			vertices.push( 1, 1, - 1 ); // 0
-			vertices.push( - 1, 1, - 1 ); // 1
-			vertices.push( 1, 1, 0 ); // 2
-			vertices.push( - 1, 1, 0 ); // 3
-			vertices.push( 0, 0, 1 ); // 4
-
-			indices.push( 0, 1, 2 );
-			indices.push( 2, 1, 3 );
-			indices.push( 2, 3, 4 );
-
-			// bottom
-
-			vertices.push( 1, - 1, - 1 ); // 5
-			vertices.push( - 1, - 1, - 1 ); // 6
-			vertices.push( 1, - 1, 0 ); // 7
-			vertices.push( - 1, - 1, 0 ); // 8
-			vertices.push( 0, 0, 1 ); // 9
-
-			indices.push( 6, 5, 7 );
-			indices.push( 6, 7, 8 );
-			indices.push( 8, 7, 9 );
-
-			// left
-
-			vertices.push( 1, 1, - 1 ); // 10
-			vertices.push( 1, - 1, - 1 ); // 11
-			vertices.push( 1, 1, 0 ); // 12
-			vertices.push( 1, - 1, 0 ); // 13
-			vertices.push( 0, 0, 1 ); // 14
-
-			indices.push( 11, 10, 12 );
-			indices.push( 12, 13, 11 );
-			indices.push( 13, 12, 14 );
-
-			// right
-
-			vertices.push( - 1, - 1, - 1 ); // 15
-			vertices.push( - 1, 1, - 1 ); // 16
-			vertices.push( - 1, - 1, 0 ); // 17
-			vertices.push( - 1, 1, 0 ); // 18
-			vertices.push( 0, 0, 1 ); // 19
-
-			indices.push( 16, 15, 17 );
-			indices.push( 17, 18, 16 );
-			indices.push( 18, 17, 19 );
-
-			// back
-
-			vertices.push( 1, 1, - 1 ); // 20
-			vertices.push( 1, - 1, - 1 ); // 21
-			vertices.push( - 1, - 1, - 1 ); // 22
-			vertices.push( - 1, 1, - 1 ); // 23
-
-			indices.push( 21, 22, 23 );
-			indices.push( 23, 20, 21 );
-
-			this.setIndex( indices );
-			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
-			this.computeVertexNormals();
-
-			this.scale( 0.5, 0.5, 0.5 );
-
-			this.computeBoundingSphere();
-
-		}
-
-	}
-
-	/**
-	 * @author Mugen87 / https://github.com/Mugen87
-	 */
-
-	const direction$2 = new Vector3();
-	const target$3 = new Vector3();
-
-	class VehicleControls extends EventDispatcher {
-
-		constructor( owner = null, camera = null ) {
-
-			super();
-
-			this.owner = owner;
-			this.camera = camera;
-
-			this.cameraOffset = new Vector3( 0, 20, 10 );
-			this.cameraMovementSpeed = 2.5;
-			this.rotationSpeed = 0.005;
-			this.brakingForce = 10;
-
-			this.movementX = 0; // mouse left/right
-			this.movementY = - 1; // mouse up/down
-
-			this.input = {
-				forward: false,
-				backward: false,
-				right: false,
-				left: false,
-				mouseDown: false
-			};
-
-			this._mouseUpHandler = onMouseUp.bind( this );
-			this._mouseDownHandler = onMouseDown.bind( this );
-			this._mouseMoveHandler = onMouseMove.bind( this );
-			this._pointerlockChangeHandler = onPointerlockChange.bind( this );
-			this._pointerlockErrorHandler = onPointerlockError.bind( this );
-			this._keyDownHandler = onKeyDown.bind( this );
-			this._keyUpHandler = onKeyUp.bind( this );
-
-		}
-
-		connect() {
-
-			document.addEventListener( 'mouseup', this._mouseUpHandler, false );
-			document.addEventListener( 'mousedown', this._mouseDownHandler, false );
-			document.addEventListener( 'mousemove', this._mouseMoveHandler, false );
-			document.addEventListener( 'pointerlockchange', this._pointerlockChangeHandler, false );
-			document.addEventListener( 'pointerlockerror', this._pointerlockErrorHandler, false );
-			document.addEventListener( 'keydown', this._keyDownHandler, false );
-			document.addEventListener( 'keyup', this._keyUpHandler, false );
-
-			document.body.requestPointerLock();
-
-		}
-
-		disconnect() {
-
-			document.removeEventListener( 'mouseup', this._mouseUpHandler, false );
-			document.removeEventListener( 'mousedown', this._mouseDownHandler, false );
-			document.removeEventListener( 'mousemove', this._mouseMoveHandler, false );
-			document.removeEventListener( 'pointerlockchange', this._pointerlockChangeHandler, false );
-			document.removeEventListener( 'pointerlockerror', this._pointerlockErrorHandler, false );
-			document.removeEventListener( 'keydown', this._keyDownHandler, false );
-			document.removeEventListener( 'keyup', this._keyUpHandler, false );
-
-		}
-
-		exit() {
-
-			document.exitPointerLock();
-
-		}
-
-		update( delta ) {
-
-			// update player position
-
-			const input = this.input;
-
-			direction$2.z = Number( input.backward ) - Number( input.forward );
-			direction$2.x = Number( input.right ) - Number( input.left );
-			direction$2.normalize();
-
-			if ( direction$2.length() === 0 ) {
-
-				// brake
-
-				this.owner.velocity.x -= this.owner.velocity.x * this.brakingForce * delta;
-				this.owner.velocity.z -= this.owner.velocity.z * this.brakingForce * delta;
-
-			} else {
-
-				this.owner.velocity.add( direction$2 );
-
-			}
-
-			// update shooting
-
-			if ( this.input.mouseDown ) {
-
-				this.owner.shoot();
-
-			}
-
-			// update camera
-
-			const offsetX = ( this.camera.position.x - this.cameraOffset.x ) - this.owner.position.x;
-			const offsetZ = ( this.camera.position.z - this.cameraOffset.z ) - this.owner.position.z;
-
-			if ( offsetX !== 0 ) this.camera.position.x -= ( offsetX * delta * this.cameraMovementSpeed );
-			if ( offsetZ !== 0 ) this.camera.position.z -= ( offsetZ * delta * this.cameraMovementSpeed );
-
-		}
-
-		reset() {
-
-			this.input.forward = false;
-			this.input.backward = false;
-			this.input.left = false;
-			this.input.right = false;
-			this.input.mouseDown = false;
-
-		}
-
-		resetRotation() {
-
-			this.movementX = 0;
-			this.movementY = - 1;
-			this.owner.rotation.fromEuler( 0, Math.PI, 0 );
-
-		}
-
-		setPosition( x, y, z ) {
-
-			this.owner.position.set( x, y, z );
-
-			this.camera.position.set( x, y, z ).add( this.cameraOffset );
-			this.camera.lookAt( x, y, z );
-
-		}
-
-	}
-
-	// handler
-
-	function onMouseDown( event ) {
-
-		if ( event.which === 1 ) {
-
-			this.input.mouseDown = true;
-
-		}
-
-	}
-
-	function onMouseUp( event ) {
-
-		if ( event.which === 1 ) {
-
-			this.input.mouseDown = false;
-
-		}
-
-	}
-
-	function onMouseMove( event ) {
-
-		this.movementX += event.movementX * this.rotationSpeed;
-		this.movementY += event.movementY * this.rotationSpeed;
-
-		this.movementX = MathUtils.clamp( this.movementX, - 1, 1 );
-		this.movementY = MathUtils.clamp( this.movementY, - 1, 1 );
-
-		direction$2.set( this.movementX, 0, this.movementY ).normalize();
-		target$3.copy( this.owner.position ).add( direction$2 );
-
-		this.owner.lookAt( target$3 );
-
-	}
-
-	function onPointerlockChange() {
-
-		if ( document.pointerLockElement === document.body ) {
-
-			this.dispatchEvent( { type: 'lock' } );
-
-		} else {
-
-			this.disconnect();
-
-			this.reset();
-
-			this.dispatchEvent( { type: 'unlock' } );
-
-		}
-
-	}
-
-	function onPointerlockError() {
-
-		Logger.warn( 'YUKA.VehicleControls: Unable to use Pointer Lock API.' );
-
-	}
-
-	function onKeyDown( event ) {
-
-		switch ( event.keyCode ) {
-
-			case 38: // up
-			case 87: // w
-				this.input.forward = true;
-				break;
-
-			case 37: // left
-			case 65: // a
-				this.input.left = true;
-				break;
-
-			case 40: // down
-			case 83: // s
-				this.input.backward = true;
-				break;
-
-			case 39: // right
-			case 68: // d
-				this.input.right = true;
-				break;
-
-		}
-
-	}
-
-	function onKeyUp( event ) {
-
-		switch ( event.keyCode ) {
-
-			case 38: // up
-			case 87: // w
-				this.input.forward = false;
-				break;
-
-			case 37: // left
-			case 65: // a
-				this.input.left = false;
-				break;
-
-			case 40: // down
-			case 83: // s
-				this.input.backward = false;
-				break;
-
-			case 39: // right
-			case 68: // d
-				this.input.right = false;
-				break;
-
-		}
-
-	}
-
 	class MovementPattern extends State {
 
 		constructor() {
@@ -64388,105 +64413,80 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
-	class AssetManager {
+	class PursuerGeometry extends BufferGeometry {
 
 		constructor() {
 
-			this.loadingManager = new LoadingManager();
+			super();
 
-			this.audioLoader = new AudioLoader( this.loadingManager );
+			const vertices = [];
+			const indices = [];
 
-			this.listener = new AudioListener();
+			// top
 
-			this.audios = new Map();
+			vertices.push( 1, 1, - 1 ); // 0
+			vertices.push( - 1, 1, - 1 ); // 1
+			vertices.push( 1, 1, 0 ); // 2
+			vertices.push( - 1, 1, 0 ); // 3
+			vertices.push( 0, 0, 1 ); // 4
 
-		}
+			indices.push( 0, 1, 2 );
+			indices.push( 2, 1, 3 );
+			indices.push( 2, 3, 4 );
 
-		init() {
+			// bottom
 
-			this._loadAudios();
+			vertices.push( 1, - 1, - 1 ); // 5
+			vertices.push( - 1, - 1, - 1 ); // 6
+			vertices.push( 1, - 1, 0 ); // 7
+			vertices.push( - 1, - 1, 0 ); // 8
+			vertices.push( 0, 0, 1 ); // 9
 
-			const loadingManager = this.loadingManager;
+			indices.push( 6, 5, 7 );
+			indices.push( 6, 7, 8 );
+			indices.push( 8, 7, 9 );
 
-			return new Promise( ( resolve ) => {
+			// left
 
-				loadingManager.onLoad = () => {
+			vertices.push( 1, 1, - 1 ); // 10
+			vertices.push( 1, - 1, - 1 ); // 11
+			vertices.push( 1, 1, 0 ); // 12
+			vertices.push( 1, - 1, 0 ); // 13
+			vertices.push( 0, 0, 1 ); // 14
 
-					setTimeout( () => {
+			indices.push( 11, 10, 12 );
+			indices.push( 12, 13, 11 );
+			indices.push( 13, 12, 14 );
 
-						resolve();
+			// right
 
-					}, 100 );
+			vertices.push( - 1, - 1, - 1 ); // 15
+			vertices.push( - 1, 1, - 1 ); // 16
+			vertices.push( - 1, - 1, 0 ); // 17
+			vertices.push( - 1, 1, 0 ); // 18
+			vertices.push( 0, 0, 1 ); // 19
 
-				};
+			indices.push( 16, 15, 17 );
+			indices.push( 17, 18, 16 );
+			indices.push( 18, 17, 19 );
 
-			} );
+			// back
 
-		}
+			vertices.push( 1, 1, - 1 ); // 20
+			vertices.push( 1, - 1, - 1 ); // 21
+			vertices.push( - 1, - 1, - 1 ); // 22
+			vertices.push( - 1, 1, - 1 ); // 23
 
-		cloneAudio( id ) {
+			indices.push( 21, 22, 23 );
+			indices.push( 23, 20, 21 );
 
-			const source = this.audios.get( id );
+			this.setIndex( indices );
+			this.setAttribute( 'position', new Float32BufferAttribute( vertices, 3 ) );
+			this.computeVertexNormals();
 
-			const audio = new source.constructor( source.listener );
-			audio.buffer = source.buffer;
-			audio.setRefDistance( source.getRefDistance() );
+			this.scale( 0.5, 0.5, 0.5 );
 
-			return audio;
-
-		}
-
-		_loadAudios() {
-
-			const audioLoader = this.audioLoader;
-			const audios = this.audios;
-			const listener = this.listener;
-
-			const refDistance = 20;
-
-			const playerShot = new PositionalAudio( listener );
-			playerShot.setRefDistance( refDistance );
-			const playerHit = new PositionalAudio( listener );
-			playerHit.setRefDistance( refDistance );
-			const playerExplode = new PositionalAudio( listener );
-			playerExplode.setRefDistance( refDistance );
-			const enemyShot = new PositionalAudio( listener );
-			enemyShot.setRefDistance( refDistance );
-			const enemyHit = new PositionalAudio( listener );
-			enemyHit.setRefDistance( refDistance );
-			const coreExplode = new PositionalAudio( listener );
-			coreExplode.setRefDistance( refDistance );
-			const coreShieldHit = new PositionalAudio( listener );
-			coreShieldHit.setRefDistance( refDistance );
-			const coreShieldDestroyed = new PositionalAudio( listener );
-			coreShieldDestroyed.setRefDistance( refDistance );
-			const pursuerExplode = new PositionalAudio( listener );
-			pursuerExplode.setRefDistance( refDistance );
-
-			const buttonClick = new Audio( listener );
-			buttonClick.setVolume( 0.5 );
-
-			audioLoader.load( './audio/playerShot.ogg', buffer => playerShot.setBuffer( buffer ) );
-			audioLoader.load( './audio/playerHit.ogg', buffer => playerHit.setBuffer( buffer ) );
-			audioLoader.load( './audio/playerExplode.ogg', buffer => playerExplode.setBuffer( buffer ) );
-			audioLoader.load( './audio/enemyShot.ogg', buffer => enemyShot.setBuffer( buffer ) );
-			audioLoader.load( './audio/enemyHit.ogg', buffer => enemyHit.setBuffer( buffer ) );
-			audioLoader.load( './audio/coreExplode.ogg', buffer => coreExplode.setBuffer( buffer ) );
-			audioLoader.load( './audio/coreShieldHit.ogg', buffer => coreShieldHit.setBuffer( buffer ) );
-			audioLoader.load( './audio/coreShieldDestroyed.ogg', buffer => coreShieldDestroyed.setBuffer( buffer ) );
-			audioLoader.load( './audio/pursuerExplode.ogg', buffer => pursuerExplode.setBuffer( buffer ) );
-			audioLoader.load( './audio/buttonClick.ogg', buffer => buttonClick.setBuffer( buffer ) );
-
-			audios.set( 'playerShot', playerShot );
-			audios.set( 'playerHit', playerHit );
-			audios.set( 'playerExplode', playerExplode );
-			audios.set( 'enemyShot', enemyShot );
-			audios.set( 'enemyHit', enemyHit );
-			audios.set( 'coreExplode', coreExplode );
-			audios.set( 'coreShieldHit', coreShieldHit );
-			audios.set( 'coreShieldDestroyed', coreShieldDestroyed );
-			audios.set( 'pursuerExplode', pursuerExplode );
-			audios.set( 'buttonClick', buttonClick );
+			this.computeBoundingSphere();
 
 		}
 
