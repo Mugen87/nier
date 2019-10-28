@@ -53,7 +53,7 @@
 				outline:0;
 			}
 
-			.fullScreen {
+			.full-screen {
 				position: fixed;
 				height: 100%;
 				width: 100%;
@@ -101,10 +101,14 @@
 				opacity: 0;
 			}
 
-			#startScreen {
+			#start-screen {
 				align-items: center;
 				justify-content: center;
 				z-index: 3
+			}
+
+			#stage-counter {
+				text-align: right;
 			}
 
 		</style>
@@ -121,45 +125,46 @@
 	</head>
 <body>
 
-	<section id="startScreen" class="fullScreen">
+	<section id="start-screen" class="full-screen">
 		<h1>
 			Use audio for best experience.
 		</h1>
 		<p>
-			<button id="startscreen-start">&#9632; Start</button>
+			<button id="start-screen-start">■ Start</button>
 		</p>
 	</section>
 
-	<section id="menu" class="fullScreen">
+	<section id="menu" class="full-screen">
 		<div class="row header">
 			<h2>YoRHa Hacking Menu</h2>
+			<div id="stage-counter">Total Stages Cleared: <span id="stages-cleared">0</span></div>
 		</div>
 		<div class="row content">
 			<p>
-				<button id="menu-continue">&#9632; Continue</button>
+				<button id="menu-continue">■ Start</button>
 			</p>
 			<p>
-				<button id="menu-restart">&#9632; Restart</button>
+				<button id="menu-restart" style="display: none;">■ Restart</button>
 			</p>
 		</div>
 		<div class="row footer">Clear as many hacking stages as you can.</div>
 	</section>
 
-	<section id="hackingComplete" class="hidden fullScreen info">
+	<section id="hacking-complete" class="hidden full-screen info">
 		<h3>HACKING COMPLETE</h3>
 	</section>
 
-	<section id="gameComplete" class="hidden fullScreen info">
+	<section id="game-complete" class="hidden full-screen info">
 		<h3>GAME COMPLETE</h3>
 		<p>
-			<button id="complete-restart">&#9632; Restart</button>
+			<button id="complete-restart">■ Restart</button>
 		</p>
 	</section>
 
-	<section id="gameOver" class="hidden fullScreen info">
+	<section id="game-over" class="hidden full-screen info">
 		<h3>GAME OVER</h3>
 		<p>
-			<button id="gameover-restart">&#9632; Restart</button>
+			<button id="gameover-restart">■ Restart</button>
 		</p>
 	</section>
 

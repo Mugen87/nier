@@ -81,9 +81,11 @@ class World {
 			restartButtonComplete: document.getElementById( 'complete-restart' ),
 			restartButtonGameOver: document.getElementById( 'gameover-restart' ),
 			menu: document.getElementById( 'menu' ),
-			hackingComplete: document.getElementById( 'hackingComplete' ),
-			gameComplete: document.getElementById( 'gameComplete' ),
-			gameOver: document.getElementById( 'gameOver' ),
+			hackingComplete: document.getElementById( 'hacking-complete' ),
+			gameComplete: document.getElementById( 'game-complete' ),
+			gameOver: document.getElementById( 'game-over' ),
+			stagesCleared: document.getElementById( 'stages-cleared' ),
+			startScreen: document.getElementById( 'start-screen' ),
 		};
 
 	}
@@ -100,6 +102,8 @@ class World {
 			this._initControls();
 
 			this._loadStage( this.currentStage );
+
+			this.ui.startScreen.remove();
 
 		} );
 
@@ -1096,6 +1100,8 @@ class World {
 
 		this._clearStage();
 
+		this._updateMenu( id );
+
 		switch ( id ) {
 
 			case 1:
@@ -1136,6 +1142,24 @@ class World {
 		}
 
 		this.active = true;
+
+	}
+
+	_updateMenu( currentStage ) {
+
+		if ( currentStage > 1 ) {
+
+			this.ui.continueButton.textContent = '■ Continue';
+			this.ui.restartButtonMenu.style.display = 'inline-block';
+
+		} else {
+
+			this.ui.continueButton.textContent = '■ Start';
+			this.ui.restartButtonMenu.style.display = 'none';
+
+		}
+
+		this.ui.stagesCleared.textContent = currentStage - 1;
 
 	}
 

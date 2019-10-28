@@ -64561,9 +64561,11 @@
 				restartButtonComplete: document.getElementById( 'complete-restart' ),
 				restartButtonGameOver: document.getElementById( 'gameover-restart' ),
 				menu: document.getElementById( 'menu' ),
-				hackingComplete: document.getElementById( 'hackingComplete' ),
-				gameComplete: document.getElementById( 'gameComplete' ),
-				gameOver: document.getElementById( 'gameOver' ),
+				hackingComplete: document.getElementById( 'hacking-complete' ),
+				gameComplete: document.getElementById( 'game-complete' ),
+				gameOver: document.getElementById( 'game-over' ),
+				stagesCleared: document.getElementById( 'stages-cleared' ),
+				startScreen: document.getElementById( 'start-screen' ),
 			};
 
 		}
@@ -64580,6 +64582,8 @@
 				this._initControls();
 
 				this._loadStage( this.currentStage );
+
+				this.ui.startScreen.remove();
 
 			} );
 
@@ -65576,6 +65580,8 @@
 
 			this._clearStage();
 
+			this._updateMenu( id );
+
 			switch ( id ) {
 
 				case 1:
@@ -65616,6 +65622,24 @@
 			}
 
 			this.active = true;
+
+		}
+
+		_updateMenu( currentStage ) {
+
+			if ( currentStage > 1 ) {
+
+				this.ui.continueButton.textContent = '■ Continue';
+				this.ui.restartButtonMenu.style.display = 'inline-block';
+
+			} else {
+
+				this.ui.continueButton.textContent = '■ Start';
+				this.ui.restartButtonMenu.style.display = 'none';
+
+			}
+
+			this.ui.stagesCleared.textContent = currentStage - 1;
 
 		}
 
@@ -65900,11 +65924,10 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
-	const startButton = document.getElementById( 'startscreen-start' );
+	const startButton = document.getElementById( 'start-screen-start' );
 	startButton.addEventListener( 'click', () => {
 
 		world.init();
-		document.getElementById( 'startScreen' ).remove();
 
 	} );
 
