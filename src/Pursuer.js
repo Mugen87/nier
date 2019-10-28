@@ -4,13 +4,13 @@
 
 import { BoundingSphere, Vehicle, StateMachine } from './lib/yuka.module.js';
 
-import world from './World.js';
-
 class Pursuer extends Vehicle {
 
-	constructor() {
+	constructor( world ) {
 
 		super();
+
+		this.world = world;
 
 		this.boundingRadius = 0.5;
 
@@ -67,6 +67,8 @@ class Pursuer extends Vehicle {
 				this.healthPoints --;
 
 				if ( this.healthPoints === 0 ) {
+
+					const world = this.world;
 
 					const audio = this.audios.get( 'pursuerExplode' );
 					world.playAudio( audio );

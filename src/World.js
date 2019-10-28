@@ -429,7 +429,7 @@ class World {
 
 	_initPlayer() {
 
-		this.player = new Player();
+		this.player = new Player( this );
 		this.player.setRenderComponent( this.playerMesh, sync );
 
 		// particle system
@@ -694,7 +694,7 @@ class World {
 
 	_createGuard() {
 
-		const guard = new Guard();
+		const guard = new Guard( this );
 		const guardMesh = this.guardMesh.clone();
 		const protectionMesh = this.protectionMesh.clone();
 		const hitMesh = this.hitMesh.clone();
@@ -730,7 +730,7 @@ class World {
 
 	_createPursuer() {
 
-		const pursuer = new Pursuer();
+		const pursuer = new Pursuer( this );
 		const pursuerMesh = this.pursuerMesh.clone();
 		pursuer.setRenderComponent( pursuerMesh, sync );
 

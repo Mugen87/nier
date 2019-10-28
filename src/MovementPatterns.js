@@ -1,7 +1,5 @@
 import { PursuitBehavior, State } from './lib/yuka.module.js';
 
-import world from './World.js';
-
 class MovementPattern extends State {
 
 	constructor() {
@@ -19,7 +17,7 @@ class LeftRightMovementPattern extends MovementPattern {
 
 	execute( enemy ) {
 
-		const elapsedTime = world.time.getElapsed();
+		const elapsedTime = enemy.world.time.getElapsed();
 
 		enemy.position.x = Math.cos( elapsedTime * this.speed ) * this.spread;
 
@@ -39,7 +37,7 @@ class WavyMovementPattern extends MovementPattern {
 
 	execute( enemy ) {
 
-		const t = world.time.getElapsed() * this.speed;
+		const t = enemy.world.time.getElapsed() * this.speed;
 
 		enemy.position.x = Math.cos( t ) * this.spread;
 		enemy.position.z = this.offset + ( Math.sin( t ) * Math.cos( t ) * this.spread );
@@ -61,7 +59,7 @@ class CircleMovementPattern extends MovementPattern {
 
 	execute( enemy ) {
 
-		const t = world.time.getElapsed() * this.speed;
+		const t = enemy.world.time.getElapsed() * this.speed;
 
 		enemy.position.x = Math.sin( t ) * this.spread;
 		enemy.position.z = - Math.cos( t ) * this.spread;
@@ -74,7 +72,7 @@ class PursuitBehaviorMovementPattern extends MovementPattern {
 
 	enter( enemy ) {
 
-		const pursuitBehavior = new PursuitBehavior( world.player, 2 );
+		const pursuitBehavior = new PursuitBehavior( enemy.world.player, 2 );
 		enemy.steering.add( pursuitBehavior );
 		enemy.maxSpeed = 2;
 

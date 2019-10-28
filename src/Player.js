@@ -6,7 +6,6 @@ import { AABB, MovingEntity, MathUtils, OBB, Ray, Vector3 } from './lib/yuka.mod
 
 import { PlayerProjectile } from './PlayerProjectile.js';
 import { Particle, ParticleSystem } from './ParticleSystem.js';
-import world from './World.js';
 
 const aabb = new AABB();
 const direction = new Vector3();
@@ -18,9 +17,11 @@ const offset = new Vector3();
 
 class Player extends MovingEntity {
 
-	constructor() {
+	constructor( world ) {
 
 		super();
+
+		this.world = world;
 
 		this.maxSpeed = 6;
 		this.updateOrientation = false;
@@ -52,6 +53,7 @@ class Player extends MovingEntity {
 
 	shoot() {
 
+		const world = this.world;
 		const elapsedTime = world.time.getElapsed();
 
 		if ( elapsedTime - this.lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -139,6 +141,8 @@ class Player extends MovingEntity {
 
 			case 'hit':
 
+				const world = this.world;
+
 				const audio = this.audios.get( 'playerHit' );
 				world.playAudio( audio );
 
@@ -169,6 +173,7 @@ class Player extends MovingEntity {
 
 		// check obstacles
 
+		const world = this.world;
 		const obstacles = world.obstacles;
 
 		for ( let i = 0, l = obstacles.length; i < l; i ++ ) {

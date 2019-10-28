@@ -5,8 +5,6 @@
 import { BoundingSphere, Vector3 } from './lib/yuka.module.js';
 import { Projectile } from './Projectile.js';
 
-import world from './World.js';
-
 const target = new Vector3();
 
 class EnemyProjectile extends Projectile {
@@ -15,7 +13,7 @@ class EnemyProjectile extends Projectile {
 
 		super( owner );
 
-		this.expiryTime = world.time.getElapsed() + 5;
+		this.expiryTime = owner.world.time.getElapsed() + 5;
 
 		this.boundingRadius = 0.4;
 		this.boundingSphere = new BoundingSphere();

@@ -1,8 +1,6 @@
 import { State, Vector3 } from './lib/yuka.module.js';
 import { EnemyProjectile } from './EnemyProjectile.js';
 
-import world from './World.js';
-
 const direction = new Vector3();
 const target = new Vector3();
 
@@ -15,9 +13,14 @@ class CombatPattern extends State {
 		this.shotsPerSecond = 0.5;
 		this.projectilesPerShot = 3;
 		this.destructibleProjectiles = 0; // amount of destructible projectiles per shot
-		this.timeScale = 1;
 
-		this._lastShotTime = this.timeScale * world.time.getElapsed();
+		this._lastShotTime = 0;
+
+	}
+
+	enter( enemy ) {
+
+		this._lastShotTime = enemy.world.time.getElapsed();
 
 	}
 
@@ -33,6 +36,7 @@ class DefaultCombatPattern extends CombatPattern {
 
 	execute( enemy ) {
 
+		const world = enemy.world;
 		const elapsedTime = world.time.getElapsed();
 
 		if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -79,6 +83,7 @@ class SpreadCombatPattern extends CombatPattern {
 
 	execute( enemy ) {
 
+		const world = enemy.world;
 		const elapsedTime = world.time.getElapsed();
 
 		if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -136,6 +141,7 @@ class FocusCombatPattern extends CombatPattern {
 
 	execute( enemy ) {
 
+		const world = enemy.world;
 		const elapsedTime = world.time.getElapsed();
 
 		if ( elapsedTime > this._nextPauseTime ) {

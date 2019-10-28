@@ -62851,6 +62851,8 @@
 
 			// remove the projectile when it leaves the game area
 
+			const world = this.owner.world;
+
 			if ( this.position.x > world.field.x || this.position.x < - world.field.x ||
 				this.position.z > world.field.z || this.position.z < - world.field.z ) {
 
@@ -63222,9 +63224,11 @@
 
 	class Player extends MovingEntity {
 
-		constructor() {
+		constructor( world ) {
 
 			super();
+
+			this.world = world;
 
 			this.maxSpeed = 6;
 			this.updateOrientation = false;
@@ -63256,6 +63260,7 @@
 
 		shoot() {
 
+			const world = this.world;
 			const elapsedTime = world.time.getElapsed();
 
 			if ( elapsedTime - this.lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -63343,6 +63348,8 @@
 
 				case 'hit':
 
+					const world = this.world;
+
 					const audio = this.audios.get( 'playerHit' );
 					world.playAudio( audio );
 
@@ -63373,6 +63380,7 @@
 
 			// check obstacles
 
+			const world = this.world;
 			const obstacles = world.obstacles;
 
 			for ( let i = 0, l = obstacles.length; i < l; i ++ ) {
@@ -63441,9 +63449,11 @@
 
 	class Guard extends Vehicle {
 
-		constructor() {
+		constructor( world ) {
 
 			super();
+
+			this.world = world;
 
 			this.boundingRadius = 0.5;
 
@@ -63485,7 +63495,7 @@
 			this.protectionMesh.visible = false;
 
 			const audio = this.audios.get( 'coreShieldDestroyed' );
-			world.playAudio( audio );
+			this.world.playAudio( audio );
 
 			return this;
 
@@ -63510,6 +63520,8 @@
 		}
 
 		update( delta ) {
+
+			const world = this.world;
 
 			this.boundingSphere.center.copy( this.position );
 
@@ -63549,6 +63561,8 @@
 		}
 
 		handleMessage( telegram ) {
+
+			const world = this.world;
 
 			switch ( telegram.message ) {
 
@@ -63622,9 +63636,11 @@
 
 	class Pursuer extends Vehicle {
 
-		constructor() {
+		constructor( world ) {
 
 			super();
+
+			this.world = world;
 
 			this.boundingRadius = 0.5;
 
@@ -63681,6 +63697,8 @@
 					this.healthPoints --;
 
 					if ( this.healthPoints === 0 ) {
+
+						const world = this.world;
 
 						const audio = this.audios.get( 'pursuerExplode' );
 						world.playAudio( audio );
@@ -64069,7 +64087,7 @@
 
 		execute( enemy ) {
 
-			const elapsedTime = world.time.getElapsed();
+			const elapsedTime = enemy.world.time.getElapsed();
 
 			enemy.position.x = Math.cos( elapsedTime * this.speed ) * this.spread;
 
@@ -64089,7 +64107,7 @@
 
 		execute( enemy ) {
 
-			const t = world.time.getElapsed() * this.speed;
+			const t = enemy.world.time.getElapsed() * this.speed;
 
 			enemy.position.x = Math.cos( t ) * this.spread;
 			enemy.position.z = this.offset + ( Math.sin( t ) * Math.cos( t ) * this.spread );
@@ -64111,7 +64129,7 @@
 
 		execute( enemy ) {
 
-			const t = world.time.getElapsed() * this.speed;
+			const t = enemy.world.time.getElapsed() * this.speed;
 
 			enemy.position.x = Math.sin( t ) * this.spread;
 			enemy.position.z = - Math.cos( t ) * this.spread;
@@ -64124,7 +64142,7 @@
 
 		enter( enemy ) {
 
-			const pursuitBehavior = new PursuitBehavior( world.player, 2 );
+			const pursuitBehavior = new PursuitBehavior( enemy.world.player, 2 );
 			enemy.steering.add( pursuitBehavior );
 			enemy.maxSpeed = 2;
 
@@ -64151,7 +64169,7 @@
 
 			super( owner );
 
-			this.expiryTime = world.time.getElapsed() + 5;
+			this.expiryTime = owner.world.time.getElapsed() + 5;
 
 			this.boundingRadius = 0.4;
 			this.boundingSphere = new BoundingSphere();
@@ -64196,9 +64214,14 @@
 			this.shotsPerSecond = 0.5;
 			this.projectilesPerShot = 3;
 			this.destructibleProjectiles = 0; // amount of destructible projectiles per shot
-			this.timeScale = 1;
 
-			this._lastShotTime = this.timeScale * world.time.getElapsed();
+			this._lastShotTime = 0;
+
+		}
+
+		enter( enemy ) {
+
+			this._lastShotTime = enemy.world.time.getElapsed();
 
 		}
 
@@ -64214,6 +64237,7 @@
 
 		execute( enemy ) {
 
+			const world = enemy.world;
 			const elapsedTime = world.time.getElapsed();
 
 			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -64260,6 +64284,7 @@
 
 		execute( enemy ) {
 
+			const world = enemy.world;
 			const elapsedTime = world.time.getElapsed();
 
 			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
@@ -64317,6 +64342,7 @@
 
 		execute( enemy ) {
 
+			const world = enemy.world;
 			const elapsedTime = world.time.getElapsed();
 
 			if ( elapsedTime > this._nextPauseTime ) {
@@ -64884,7 +64910,7 @@
 
 		_initPlayer() {
 
-			this.player = new Player();
+			this.player = new Player( this );
 			this.player.setRenderComponent( this.playerMesh, sync );
 
 			// particle system
@@ -65149,7 +65175,7 @@
 
 		_createGuard() {
 
-			const guard = new Guard();
+			const guard = new Guard( this );
 			const guardMesh = this.guardMesh.clone();
 			const protectionMesh = this.protectionMesh.clone();
 			const hitMesh = this.hitMesh.clone();
@@ -65185,7 +65211,7 @@
 
 		_createPursuer() {
 
-			const pursuer = new Pursuer();
+			const pursuer = new Pursuer( this );
 			const pursuerMesh = this.pursuerMesh.clone();
 			pursuer.setRenderComponent( pursuerMesh, sync );
 

@@ -4,15 +4,15 @@
 
 import { BoundingSphere, Vehicle, StateMachine, Quaternion } from './lib/yuka.module.js';
 
-import world from './World.js';
-
 const q = new Quaternion();
 
 class Guard extends Vehicle {
 
-	constructor() {
+	constructor( world ) {
 
 		super();
+
+		this.world = world;
 
 		this.boundingRadius = 0.5;
 
@@ -54,7 +54,7 @@ class Guard extends Vehicle {
 		this.protectionMesh.visible = false;
 
 		const audio = this.audios.get( 'coreShieldDestroyed' );
-		world.playAudio( audio );
+		this.world.playAudio( audio );
 
 		return this;
 
@@ -79,6 +79,8 @@ class Guard extends Vehicle {
 	}
 
 	update( delta ) {
+
+		const world = this.world;
 
 		this.boundingSphere.center.copy( this.position );
 
@@ -118,6 +120,8 @@ class Guard extends Vehicle {
 	}
 
 	handleMessage( telegram ) {
+
+		const world = this.world;
 
 		switch ( telegram.message ) {
 

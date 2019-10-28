@@ -4,8 +4,6 @@
 
 import { MovingEntity } from './lib/yuka.module.js';
 
-import world from './World.js';
-
 class Projectile extends MovingEntity {
 
 	constructor( owner = null ) {
@@ -21,6 +19,8 @@ class Projectile extends MovingEntity {
 		super.update( delta );
 
 		// remove the projectile when it leaves the game area
+
+		const world = this.owner.world;
 
 		if ( this.position.x > world.field.x || this.position.x < - world.field.x ||
 			this.position.z > world.field.z || this.position.z < - world.field.z ) {
