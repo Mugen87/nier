@@ -1,0 +1,168 @@
+<html lang="en">
+	<head>
+		<title>Yuka | Nier: Automata YoRHa Hacking</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link rel="shortcut icon" type="image/x-icon" href="https://mugen87.github.io/yuka/favicon.ico">
+		<style>
+			* {
+				-webkit-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+			}
+
+			body {
+				margin:0;
+				font-family: fot-rodin-pron, sans-serif;
+				font-weight: 600;
+				font-style: normal;
+			}
+
+			canvas {
+				display: block;
+			}
+
+			h2 {
+				font-size: 40px;
+				margin-top: 64px;
+			}
+
+			button {
+				background-color: #b7b1a1;
+				border: none;
+				color: #554e40;
+				text-align: left;
+				text-decoration: none;
+				display: inline-block;
+				font-family: fot-rodin-pron, sans-serif;
+				font-size: 16px;
+				width: 256px;
+				padding: 4px 8px;
+			}
+
+			button:hover {
+				background-color: #6f6a61;
+				color: #d2cec4;
+				cursor: pointer;
+				box-shadow: 2px 2px 2px rgba(0,0,0,0.1);
+			}
+
+			button:focus {
+				outline:0;
+			}
+
+			.fullScreen {
+				position: fixed;
+				height: 100%;
+				width: 100%;
+				background-color: #d1c9b6;
+				color: #554e40;
+				display: flex;
+				flex-direction: column;
+				box-shadow: 0 0 200px rgba(0,0,0,0.8) inset;
+			}
+
+			#menu {
+				justify-content: space-between;
+				z-index: 2;
+			}
+
+			#menu .row {
+				margin: 0 64px;
+			}
+
+			#menu .footer {
+				background-color: #dad2c0;
+				margin-bottom: 64px;
+				padding: 16px;
+				box-shadow: 2px 2px 2px rgba(0,0,0,0.25);
+			}
+
+			#menu.hidden {
+				display: none;
+			}
+
+			.info {
+				align-items: center;
+				justify-content: center;
+				font-size: 40px;
+				letter-spacing: 32px;
+				text-decoration: underline;
+				z-index: 1;
+				visibility: visible;
+				opacity: 1;
+				transition: visibility 0.2s, opacity 0.2s ease-in;
+			}
+
+			.info.hidden {
+				visibility: hidden;
+				opacity: 0;
+			}
+
+			#startScreen {
+				align-items: center;
+				justify-content: center;
+				z-index: 3
+			}
+
+		</style>
+		<script>
+		(function(d) {
+			var config = {
+				kitId: 'ywh2zpw',
+				scriptTimeout: 3000,
+				async: true
+			},
+			h=d.documentElement,t=setTimeout(function(){h.className=h.className.replace(/\bwf-loading\b/g,"")+" wf-inactive";},config.scriptTimeout),tk=d.createElement("script"),f=false,s=d.getElementsByTagName("script")[0],a;h.className+=" wf-loading";tk.src='https://use.typekit.net/'+config.kitId+'.js';tk.async=true;tk.onload=tk.onreadystatechange=function(){a=this.readyState;if(f||a&&a!="complete"&&a!="loaded")return;f=true;clearTimeout(t);try{Typekit.load(config)}catch(e){}};s.parentNode.insertBefore(tk,s)
+		})(document);
+</script>
+	</head>
+<body>
+
+	<section id="startScreen" class="fullScreen">
+		<h1>
+			Use audio for best experience.
+		</h1>
+		<p>
+			<button id="startscreen-start">&#9632; Start</button>
+		</p>
+	</section>
+
+	<section id="menu" class="fullScreen">
+		<div class="row header">
+			<h2>YoRHa Hacking Menu</h2>
+		</div>
+		<div class="row content">
+			<p>
+				<button id="menu-continue">&#9632; Continue</button>
+			</p>
+			<p>
+				<button id="menu-restart">&#9632; Restart</button>
+			</p>
+		</div>
+		<div class="row footer">Clear as many hacking stages as you can.</div>
+	</section>
+
+	<section id="hackingComplete" class="hidden fullScreen info">
+		<h3>HACKING COMPLETE</h3>
+	</section>
+
+	<section id="gameComplete" class="hidden fullScreen info">
+		<h3>GAME COMPLETE</h3>
+		<p>
+			<button id="complete-restart">&#9632; Restart</button>
+		</p>
+	</section>
+
+	<section id="gameOver" class="hidden fullScreen info">
+		<h3>GAME OVER</h3>
+		<p>
+			<button id="gameover-restart">&#9632; Restart</button>
+		</p>
+	</section>
+
+	<script src="../build/bundle.js"></script>
+
+</body>
+</html>

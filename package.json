@@ -1,0 +1,38 @@
+{
+  "name": "nier",
+  "version": "1.0.0",
+  "description": "Hacking game from Nier: Automata",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup -c \"config/rollup/config.js\"",
+    "build-prod": "rollup -c \"config/rollup/config.js\" && google-closure-compiler-js build/bundle.js > build/bundle.min.js",
+    "dev": "concurrently \"rollup -c \"config/rollup/config.js\" -w\" \"http-server -c-1\"",
+    "lint": "eslint src --ext .js",
+    "start": "npm run dev"
+  },
+  "eslintConfig": {
+    "extends": "mdcs"
+  },
+  "eslintIgnore": [
+    "yuka.module.js",
+    "three.module.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mugen87/nier.git"
+  },
+  "author": "Mugen87",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Mugen87/nier/issues"
+  },
+  "homepage": "https://github.com/Mugen87/nier#readme",
+  "devDependencies": {
+    "concurrently": "^5.0.0",
+    "eslint": "^6.6.0",
+    "eslint-config-mdcs": "^4.2.3",
+    "google-closure-compiler": "^20190929.0.0",
+    "http-server": "0.9.0",
+    "rollup": "^1.26.0"
+  }
+}
