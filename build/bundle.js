@@ -62945,6 +62945,13 @@
 
 	const direction$1 = new Vector3();
 	const target$2 = new Vector3();
+	const currentGamepadValues = {
+		buttonPressed: false,
+		leftStickX: 0,
+		leftStickY: 0,
+		rightStickX: 0,
+		rightStickY: 0,
+	};
 
 	class VehicleControls extends EventDispatcher {
 
@@ -62971,6 +62978,8 @@
 				mouseDown: false
 			};
 
+			this.gamepadActive = false;
+
 			this._mouseUpHandler = onMouseUp.bind( this );
 			this._mouseDownHandler = onMouseDown.bind( this );
 			this._mouseMoveHandler = onMouseMove.bind( this );
@@ -62978,6 +62987,11 @@
 			this._pointerlockErrorHandler = onPointerlockError.bind( this );
 			this._keyDownHandler = onKeyDown.bind( this );
 			this._keyUpHandler = onKeyUp.bind( this );
+			this._gamepadconnectedHandler = onGamepadconnected.bind( this );
+			this._gamepaddisconnectedHandler = onGamepaddisconnected.bind( this );
+
+			window.addEventListener( 'gamepadconnected', this._gamepadconnectedHandler );
+			window.addEventListener( 'gamepaddisconnected', this._gamepaddisconnectedHandler );
 
 		}
 
@@ -63015,15 +63029,52 @@
 
 		update( delta ) {
 
+			if ( this.gamepadActive === true ) {
+
+				// gamepad input
+
+				this.pollGamepad();
+
+				direction$1.x = currentGamepadValues.leftStickX;
+				direction$1.z = currentGamepadValues.leftStickY;
+
+				//
+
+				target$2.set( 0, 0, 0 );
+
+				target$2.x = currentGamepadValues.rightStickX;
+				target$2.z = currentGamepadValues.rightStickY;
+
+				if ( target$2.squaredLength() !== 0 ) {
+
+					target$2.add( this.owner.position );
+
+					this.owner.lookAt( target$2 );
+
+				}
+
+			} else {
+
+				// mouse input
+
+				const input = this.input;
+
+				direction$1.z = Number( input.backward ) - Number( input.forward );
+				direction$1.x = Number( input.right ) - Number( input.left );
+				direction$1.normalize();
+
+				//
+
+				target$2.set( this.movementX, 0, this.movementY ).normalize();
+				target$2.add( this.owner.position );
+
+				this.owner.lookAt( target$2 );
+
+			}
+
 			// update player position
 
-			const input = this.input;
-
-			direction$1.z = Number( input.backward ) - Number( input.forward );
-			direction$1.x = Number( input.right ) - Number( input.left );
-			direction$1.normalize();
-
-			if ( direction$1.length() === 0 ) {
+			if ( direction$1.squaredLength() === 0 ) {
 
 				// brake
 
@@ -63038,7 +63089,7 @@
 
 			// update shooting
 
-			if ( this.input.mouseDown ) {
+			if ( this.input.mouseDown || currentGamepadValues.buttonPressed === true ) {
 
 				this.owner.shoot();
 
@@ -63054,6 +63105,27 @@
 
 		}
 
+		pollGamepad( ) {
+
+			const gamepad = getGamepad(); // assuming PS4 gamepad
+
+			if ( gamepad ) {
+
+				const axes = gamepad.axes;
+
+				currentGamepadValues.leftStickX = ( Math.abs( axes[ 0 ] ) < 0.2 ) ? 0 : axes[ 0 ]; // ignore small input values
+				currentGamepadValues.leftStickY = ( Math.abs( axes[ 1 ] ) < 0.2 ) ? 0 : axes[ 1 ];
+				currentGamepadValues.rightStickX = ( Math.abs( axes[ 2 ] ) < 0.2 ) ? 0 : axes[ 2 ];
+				currentGamepadValues.rightStickY = ( Math.abs( axes[ 3 ] ) < 0.2 ) ? 0 : axes[ 3 ];
+
+				const buttons = gamepad.buttons;
+
+				currentGamepadValues.buttonPressed = buttons[ 5 ].pressed; // R1
+
+			}
+
+		}
+
 		reset() {
 
 			this.input.forward = false;
@@ -63061,6 +63133,12 @@
 			this.input.left = false;
 			this.input.right = false;
 			this.input.mouseDown = false;
+
+			currentGamepadValues.leftStickX = 0;
+			currentGamepadValues.leftStickY = 0;
+			currentGamepadValues.rightStickX = 0;
+			currentGamepadValues.rightStickY = 0;
+			currentGamepadValues.button = false;
 
 		}
 
@@ -63080,6 +63158,22 @@
 			this.camera.lookAt( x, y, z );
 
 		}
+
+	}
+
+	function getGamepad() {
+
+		var gamepads = navigator.getGamepads && navigator.getGamepads();
+
+		for ( var i = 0; i < 4; i ++ ) {
+
+			var gamepad = gamepads[ i ];
+
+			if ( gamepad ) return gamepad;
+
+		}
+
+		return null;
 
 	}
 
@@ -63113,11 +63207,6 @@
 		this.movementX = MathUtils.clamp( this.movementX, - 1, 1 );
 		this.movementY = MathUtils.clamp( this.movementY, - 1, 1 );
 
-		direction$1.set( this.movementX, 0, this.movementY ).normalize();
-		target$2.copy( this.owner.position ).add( direction$1 );
-
-		this.owner.lookAt( target$2 );
-
 	}
 
 	function onPointerlockChange() {
@@ -63141,6 +63230,18 @@
 	function onPointerlockError() {
 
 		Logger.warn( 'YUKA.VehicleControls: Unable to use Pointer Lock API.' );
+
+	}
+
+	function onGamepadconnected() {
+
+		this.gamepadActive = true;
+
+	}
+
+	function onGamepaddisconnected() {
+
+		this.gamepadActive = false;
 
 	}
 
