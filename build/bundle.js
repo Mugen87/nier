@@ -62878,6 +62878,7 @@
 			const audio = new source.constructor( source.listener );
 			audio.buffer = source.buffer;
 			audio.setRefDistance( source.getRefDistance() );
+			audio.setVolume( source.getVolume() );
 
 			return audio;
 
@@ -62899,6 +62900,7 @@
 			playerExplode.setRefDistance( refDistance );
 			const enemyShot = new PositionalAudio( listener );
 			enemyShot.setRefDistance( refDistance );
+			enemyShot.setVolume( 0.3 );
 			const enemyHit = new PositionalAudio( listener );
 			enemyHit.setRefDistance( refDistance );
 			const coreExplode = new PositionalAudio( listener );
@@ -64196,6 +64198,38 @@
 
 	}
 
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
+	class Obstacle extends GameEntity {
+
+		constructor() {
+
+			super();
+
+			this.boundingRadius = 0.75;
+
+			this.aabb = new AABB();
+			this.obb = new OBB();
+
+			this.needsUpdate = true; // controls update of render component since obstacles are mostly static
+
+			this.size = new Vector3( 1, 1, 1 );
+
+		}
+
+		updateBoundingVolumes() {
+
+			this.aabb.fromCenterAndSize( this.position, this.size );
+
+			this.obb.center.copy( this.position );
+			this.obb.halfSizes.copy( this.size ).multiplyScalar( 0.5 );
+
+		}
+
+	}
+
 	class MovementPattern extends State {
 
 		constructor() {
@@ -64270,14 +64304,12 @@
 
 			const pursuitBehavior = new PursuitBehavior( enemy.world.player, 2 );
 			enemy.steering.add( pursuitBehavior );
-			enemy.maxSpeed = 2;
 
 		}
 
 		exit( enemy ) {
 
 			enemy.steering.clear();
-			enemy.maxSpeed = 1;
 
 		}
 
@@ -64612,7 +64644,7 @@
 
 			this.field = new Vector3( 7.5, 0, 7.5 );
 			this.currentStage = 1;
-			this.maxStage = 8;
+			this.maxStage = 9;
 
 			this.camera = null;
 			this.scene = null;
@@ -65155,6 +65187,7 @@
 			// enemies
 
 			const guard = this._createGuard();
+			guard.maxSpeed = 2;
 			guard.position.set( 0, 0.5, - 4 );
 			const combatPattern = new SpreadCombatPattern();
 			combatPattern.shotsPerSecond = 2;
@@ -65176,6 +65209,7 @@
 			// enemies
 
 			const guard = this._createGuard();
+			guard.maxSpeed = 2;
 			guard.position.set( 0, 0.5, - 4 );
 			const combatPattern = new FocusCombatPattern();
 			combatPattern.destructibleProjectiles = 5;
@@ -65212,6 +65246,7 @@
 			for ( let i = 0; i < pusuerCount; i ++ ) {
 
 				const pursuer = this._createPursuer();
+				pursuer.maxSpeed = 2;
 
 				const s = Math.PI * ( i / pusuerCount );
 				const x = Math.cos( s ) * 4;
@@ -65258,6 +65293,7 @@
 			for ( let i = 0; i < pusuerCount; i ++ ) {
 
 				const pursuer = this._createPursuer();
+				pursuer.maxSpeed = 2;
 
 				const s = Math.PI * ( i / pusuerCount );
 				const x = Math.cos( s ) * 4;
@@ -65275,6 +65311,47 @@
 
 			}
 
+		}
+
+		_loadStage09() {
+
+			// controls
+
+			this.controls.setPosition( 0, 0.5, 5 );
+			this.controls.resetRotation();
+
+			// enemies
+
+			const guardCount = 2;
+
+			for ( let i = 0; i < guardCount; i ++ ) {
+
+				const guard = this._createGuard();
+				guard.position.set( 3 - ( i * 6 ), 0.5, - 6 );
+
+				const combatPattern = new SpreadCombatPattern();
+				combatPattern.projectilesPerShot = 4;
+				combatPattern.shotsPerSecond = 8;
+				combatPattern.enableRotation = false;
+				guard.setCombatPattern( combatPattern );
+
+				const movementPattern = new PursuitBehaviorMovementPattern();
+				guard.setMovementPattern( movementPattern );
+				this.addGuard( guard );
+
+			}
+
+			// obstacles
+
+			const obstacleCount = 5;
+
+			for ( let i = 0; i < obstacleCount; i ++ ) {
+
+				const obstacle = new Obstacle();
+				obstacle.position.set( 6 - ( i * 3 ), 0.5, 2 );
+				this.addObstacle( obstacle );
+
+			}
 
 		}
 
@@ -65283,7 +65360,9 @@
 			const guard = new Guard( this );
 			const guardMesh = this.guardMesh.clone();
 			const protectionMesh = this.protectionMesh.clone();
+			protectionMesh.material = this.protectionMesh.material.clone(); // cloning a mesh does not clone its material (but we need unique uniforms!)
 			const hitMesh = this.hitMesh.clone();
+			hitMesh.material = this.hitMesh.material.clone();
 
 			guardMesh.add( protectionMesh );
 			guardMesh.add( hitMesh );
@@ -65717,6 +65796,10 @@
 					this._loadStage08();
 					break;
 
+				case 9:
+					this._loadStage09();
+					break;
+
 				default:
 					console.error( 'Unknown level ID', id );
 
@@ -65880,6 +65963,7 @@
 
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const obstacles = this.obstacles;
 
 			// guards
 
@@ -65903,6 +65987,12 @@
 				for ( let j = 0, jl = pursuers.length; j < jl; j ++ ) {
 
 					this._checkOverlappingEntites( guard, pursuers[ j ] );
+
+				}
+
+				for ( let j = 0, jl = obstacles.length; j < jl; j ++ ) {
+
+					this._checkOverlappingEntites( guard, obstacles[ j ] );
 
 				}
 
@@ -65934,11 +66024,19 @@
 
 				}
 
+				for ( let j = 0, jl = obstacles.length; j < jl; j ++ ) {
+
+					this._checkOverlappingEntites( pursuer, obstacles[ j ] );
+
+				}
+
 			}
 
 		}
 
 		_checkOverlappingEntites( entity1, entity2 ) {
+
+			// code based on "Programming Game AI by Example", chapter 3 section "Ensuring Zero Overlap"
 
 			toVector.subVectors( entity1.position, entity2.position );
 

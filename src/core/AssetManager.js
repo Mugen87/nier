@@ -47,6 +47,7 @@ class AssetManager {
 		const audio = new source.constructor( source.listener );
 		audio.buffer = source.buffer;
 		audio.setRefDistance( source.getRefDistance() );
+		audio.setVolume( source.getVolume() );
 
 		return audio;
 
@@ -68,6 +69,7 @@ class AssetManager {
 		playerExplode.setRefDistance( refDistance );
 		const enemyShot = new THREE.PositionalAudio( listener );
 		enemyShot.setRefDistance( refDistance );
+		enemyShot.setVolume( 0.3 );
 		const enemyHit = new THREE.PositionalAudio( listener );
 		enemyHit.setRefDistance( refDistance );
 		const coreExplode = new THREE.PositionalAudio( listener );

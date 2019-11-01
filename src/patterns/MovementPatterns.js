@@ -74,14 +74,12 @@ class PursuitBehaviorMovementPattern extends MovementPattern {
 
 		const pursuitBehavior = new PursuitBehavior( enemy.world.player, 2 );
 		enemy.steering.add( pursuitBehavior );
-		enemy.maxSpeed = 2;
 
 	}
 
 	exit( enemy ) {
 
 		enemy.steering.clear();
-		enemy.maxSpeed = 1;
 
 	}
 

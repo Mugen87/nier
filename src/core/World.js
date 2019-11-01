@@ -11,6 +11,7 @@ import { VehicleControls } from './VehicleControls.js';
 import { Player } from '../entities/Player.js';
 import { Guard } from '../entities/Guard.js';
 import { Pursuer } from '../entities/Pursuer.js';
+import { Obstacle } from '../entities/Obstacle.js';
 import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, PursuitBehaviorMovementPattern } from '../patterns/MovementPatterns.js';
 import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from '../patterns/CombatPatterns.js';
 import { ProtectionShader, HitShader } from '../etc/Shaders.js';
@@ -31,7 +32,7 @@ class World {
 
 		this.field = new YUKA.Vector3( 7.5, 0, 7.5 );
 		this.currentStage = 1;
-		this.maxStage = 8;
+		this.maxStage = 9;
 
 		this.camera = null;
 		this.scene = null;
@@ -574,6 +575,7 @@ class World {
 		// enemies
 
 		const guard = this._createGuard();
+		guard.maxSpeed = 2;
 		guard.position.set( 0, 0.5, - 4 );
 		const combatPattern = new SpreadCombatPattern();
 		combatPattern.shotsPerSecond = 2;
@@ -595,6 +597,7 @@ class World {
 		// enemies
 
 		const guard = this._createGuard();
+		guard.maxSpeed = 2;
 		guard.position.set( 0, 0.5, - 4 );
 		const combatPattern = new FocusCombatPattern();
 		combatPattern.destructibleProjectiles = 5;
@@ -631,6 +634,7 @@ class World {
 		for ( let i = 0; i < pusuerCount; i ++ ) {
 
 			const pursuer = this._createPursuer();
+			pursuer.maxSpeed = 2;
 
 			const s = Math.PI * ( i / pusuerCount );
 			const x = Math.cos( s ) * 4;
@@ -677,6 +681,7 @@ class World {
 		for ( let i = 0; i < pusuerCount; i ++ ) {
 
 			const pursuer = this._createPursuer();
+			pursuer.maxSpeed = 2;
 
 			const s = Math.PI * ( i / pusuerCount );
 			const x = Math.cos( s ) * 4;
@@ -694,6 +699,47 @@ class World {
 
 		}
 
+	}
+
+	_loadStage09() {
+
+		// controls
+
+		this.controls.setPosition( 0, 0.5, 5 );
+		this.controls.resetRotation();
+
+		// enemies
+
+		const guardCount = 2;
+
+		for ( let i = 0; i < guardCount; i ++ ) {
+
+			const guard = this._createGuard();
+			guard.position.set( 3 - ( i * 6 ), 0.5, - 6 );
+
+			const combatPattern = new SpreadCombatPattern();
+			combatPattern.projectilesPerShot = 4;
+			combatPattern.shotsPerSecond = 8;
+			combatPattern.enableRotation = false;
+			guard.setCombatPattern( combatPattern );
+
+			const movementPattern = new PursuitBehaviorMovementPattern();
+			guard.setMovementPattern( movementPattern );
+			this.addGuard( guard );
+
+		}
+
+		// obstacles
+
+		const obstacleCount = 5;
+
+		for ( let i = 0; i < obstacleCount; i ++ ) {
+
+			const obstacle = new Obstacle();
+			obstacle.position.set( 6 - ( i * 3 ), 0.5, 2 );
+			this.addObstacle( obstacle );
+
+		}
 
 	}
 
@@ -702,7 +748,9 @@ class World {
 		const guard = new Guard( this );
 		const guardMesh = this.guardMesh.clone();
 		const protectionMesh = this.protectionMesh.clone();
+		protectionMesh.material = this.protectionMesh.material.clone(); // cloning a mesh does not clone its material (but we need unique uniforms!)
 		const hitMesh = this.hitMesh.clone();
+		hitMesh.material = this.hitMesh.material.clone();
 
 		guardMesh.add( protectionMesh );
 		guardMesh.add( hitMesh );
@@ -1136,6 +1184,10 @@ class World {
 				this._loadStage08();
 				break;
 
+			case 9:
+				this._loadStage09();
+				break;
+
 			default:
 				console.error( 'Unknown level ID', id );
 
@@ -1299,6 +1351,7 @@ class World {
 
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const obstacles = this.obstacles;
 
 		// guards
 
@@ -1322,6 +1375,12 @@ class World {
 			for ( let j = 0, jl = pursuers.length; j < jl; j ++ ) {
 
 				this._checkOverlappingEntites( guard, pursuers[ j ] );
+
+			}
+
+			for ( let j = 0, jl = obstacles.length; j < jl; j ++ ) {
+
+				this._checkOverlappingEntites( guard, obstacles[ j ] );
 
 			}
 
@@ -1353,11 +1412,19 @@ class World {
 
 			}
 
+			for ( let j = 0, jl = obstacles.length; j < jl; j ++ ) {
+
+				this._checkOverlappingEntites( pursuer, obstacles[ j ] );
+
+			}
+
 		}
 
 	}
 
 	_checkOverlappingEntites( entity1, entity2 ) {
+
+		// code based on "Programming Game AI by Example", chapter 3 section "Ensuring Zero Overlap"
 
 		toVector.subVectors( entity1.position, entity2.position );
 

@@ -10,7 +10,7 @@ class Obstacle extends GameEntity {
 
 		super();
 
-		this.boundingRadius = 0.5;
+		this.boundingRadius = 0.75;
 
 		this.aabb = new AABB();
 		this.obb = new OBB();
