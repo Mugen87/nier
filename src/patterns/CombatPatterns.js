@@ -12,7 +12,7 @@ class CombatPattern extends State {
 
 		this.shotsPerSecond = 0.5;
 		this.projectilesPerShot = 3;
-		this.destructibleProjectiles = 0; // amount of destructible projectiles per shot
+		this.destructibleProjectiles = 0; // amount of destructible projectiles per shot [0,1]
 
 		this._lastShotTime = 0;
 
@@ -32,6 +32,8 @@ class DefaultCombatPattern extends CombatPattern {
 
 		super();
 
+		this.angularStep = Math.PI * 0.167; // 30 degrees;
+
 	}
 
 	execute( enemy ) {
@@ -39,22 +41,26 @@ class DefaultCombatPattern extends CombatPattern {
 		const world = enemy.world;
 		const elapsedTime = world.time.getElapsed();
 
+		const halfAngle = this.angularStep * ( this.projectilesPerShot - 1 ) / 2;
+
 		if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
 
 			this._lastShotTime = elapsedTime;
 
 			for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
 
+				const s = halfAngle - this.angularStep * i;
+
 				target.copy( enemy.position );
-				target.x -= ( - 1 + i );
-				target.z += 1;
+				target.x += Math.sin( s );
+				target.z += Math.cos( s );
 
 				direction.subVectors( target, enemy.position ).normalize();
 				direction.applyRotation( enemy.rotation );
 
 				const projectile = new EnemyProjectile( enemy, direction );
 
-				if ( i < this.destructibleProjectiles ) projectile.isDestructible = true;
+				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
 
 				world.addProjectile( projectile );
 
@@ -105,7 +111,7 @@ class SpreadCombatPattern extends CombatPattern {
 
 				const projectile = new EnemyProjectile( enemy, direction );
 
-				if ( i < this.destructibleProjectiles ) projectile.isDestructible = true;
+				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
 
 				world.addProjectile( projectile );
 
@@ -135,7 +141,6 @@ class FocusCombatPattern extends CombatPattern {
 
 		this._nextPauseTime = Infinity;
 		this._nextShotTime = - Infinity;
-		this._projectileCount = 0;
 
 	}
 
@@ -149,7 +154,6 @@ class FocusCombatPattern extends CombatPattern {
 			this.shooting = false;
 			this._nextPauseTime = Infinity;
 			this._nextShotTime = elapsedTime + this.pauseDuration;
-			this._projectileCount = 0;
 
 		}
 
@@ -168,9 +172,8 @@ class FocusCombatPattern extends CombatPattern {
 			enemy.getDirection( direction );
 
 			const projectile = new EnemyProjectile( enemy, direction );
-			this._projectileCount ++;
 
-			if ( this._projectileCount <= this.destructibleProjectiles ) projectile.isDestructible = true;
+			if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
 
 			world.addProjectile( projectile );
 

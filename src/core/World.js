@@ -16,6 +16,7 @@ import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, P
 import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from '../patterns/CombatPatterns.js';
 import { ProtectionShader, HitShader } from '../etc/Shaders.js';
 import { PursuerGeometry } from '../etc/PursuerGeometry.js';
+import { AnimationSystem, PropertyAnimation } from './AnimationSystem.js';
 
 const toVector = new YUKA.Vector3();
 const displacement = new YUKA.Vector3();
@@ -30,9 +31,11 @@ class World {
 		this.entityManager = new YUKA.EntityManager();
 		this.time = new YUKA.Time();
 
-		this.field = new YUKA.Vector3( 7.5, 0, 7.5 );
-		this.currentStage = 1;
-		this.maxStage = 9;
+		this.currentStage = 10;
+		this.maxStage = 10;
+
+		this.field = new YUKA.Vector3( 15, 1, 15 );
+		this.fieldMesh = null;
 
 		this.camera = null;
 		this.scene = null;
@@ -67,6 +70,8 @@ class World {
 		this.guardsProtected = false;
 
 		this.assetManager = null;
+
+		this.animationSystem = new AnimationSystem();
 
 		this._requestID = null;
 
@@ -115,6 +120,10 @@ class World {
 		const delta = this.time.update().getDelta();
 
 		if ( this.active ) {
+
+			// animations
+
+			this.animationSystem.update( delta );
 
 			// game logic
 
@@ -174,6 +183,15 @@ class World {
 
 		this.entityManager.remove( pursuer );
 		this.scene.remove( pursuer._renderComponent );
+
+	}
+
+	updateField( x, y, z ) {
+
+		this.field.set( x, y, z );
+
+		this.fieldMesh.geometry.dispose();
+		this.fieldMesh.geometry = new THREE.BoxBufferGeometry( x, y, z );
 
 	}
 
@@ -287,17 +305,17 @@ class World {
 
 		// this.scene.add( new THREE.CameraHelper( dirLight.shadow.camera ) );
 
-		// ground
+		// field
 
-		const groundGeometry = new THREE.BoxBufferGeometry( 15, 1, 15 );
-		const groundMaterial = new THREE.MeshLambertMaterial( { color: 0xaca181 } );
+		const fieldGeometry = new THREE.BoxBufferGeometry( this.field.x, this.field.y, this.field.z );
+		const fieldMaterial = new THREE.MeshLambertMaterial( { color: 0xaca181 } );
 
-		const ground = new THREE.Mesh( groundGeometry, groundMaterial );
-		ground.matrixAutoUpdate = false;
-		ground.position.set( 0, - 0.5, 0 );
-		ground.updateMatrix();
-		ground.receiveShadow = true;
-		this.scene.add( ground );
+		this.fieldMesh = new THREE.Mesh( fieldGeometry, fieldMaterial );
+		this.fieldMesh.matrixAutoUpdate = false;
+		this.fieldMesh.position.set( 0, - 0.5, 0 );
+		this.fieldMesh.updateMatrix();
+		this.fieldMesh.receiveShadow = true;
+		this.scene.add( this.fieldMesh );
 
 		// player
 
@@ -557,7 +575,7 @@ class World {
 		guard.position.set( 0, 0.5, - 4 );
 		const combatPattern = new DefaultCombatPattern();
 		combatPattern.shotsPerSecond = 2;
-		combatPattern.destructibleProjectiles = 3;
+		combatPattern.destructibleProjectiles = 1;
 		guard.setCombatPattern( combatPattern );
 		guard.setMovementPattern( new LeftRightMovementPattern() );
 
@@ -600,7 +618,7 @@ class World {
 		guard.maxSpeed = 2;
 		guard.position.set( 0, 0.5, - 4 );
 		const combatPattern = new FocusCombatPattern();
-		combatPattern.destructibleProjectiles = 5;
+		combatPattern.destructibleProjectiles = 0.5;
 		guard.setCombatPattern( combatPattern );
 		guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
 
@@ -629,14 +647,14 @@ class World {
 
 		// pursuer
 
-		const pusuerCount = 7;
+		const pursuerCount = 7;
 
-		for ( let i = 0; i < pusuerCount; i ++ ) {
+		for ( let i = 0; i < pursuerCount; i ++ ) {
 
 			const pursuer = this._createPursuer();
 			pursuer.maxSpeed = 2;
 
-			const s = Math.PI * ( i / pusuerCount );
+			const s = Math.PI * ( i / pursuerCount );
 			const x = Math.cos( s ) * 4;
 			const z = - 4 + Math.sin( s ) * 4;
 
@@ -676,14 +694,14 @@ class World {
 
 		// pursuer
 
-		const pusuerCount = 7;
+		const pursuerCount = 7;
 
-		for ( let i = 0; i < pusuerCount; i ++ ) {
+		for ( let i = 0; i < pursuerCount; i ++ ) {
 
 			const pursuer = this._createPursuer();
 			pursuer.maxSpeed = 2;
 
-			const s = Math.PI * ( i / pusuerCount );
+			const s = Math.PI * ( i / pursuerCount );
 			const x = Math.cos( s ) * 4;
 			const z = - 4 + Math.sin( s ) * 4;
 
@@ -738,6 +756,68 @@ class World {
 			const obstacle = new Obstacle();
 			obstacle.position.set( 6 - ( i * 3 ), 0.5, 2 );
 			this.addObstacle( obstacle );
+
+		}
+
+	}
+
+	_loadStage10() {
+
+		this.guardsProtected = true;
+
+		// field
+
+		this.updateField( 25, 1, 25 );
+
+		// controls
+
+		this.controls.setPosition( 0, 0.5, 10 );
+		this.controls.resetRotation();
+
+		// guard
+
+		const guard = this._createGuard();
+		guard.position.set( 0, 0.5, 0 );
+		const combatPattern = new DefaultCombatPattern();
+		combatPattern.projectilesPerShot = 5;
+		combatPattern.destructibleProjectiles = 0.5;
+		combatPattern.shotsPerSecond = 0.1;
+		guard.setCombatPattern( combatPattern );
+		guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+		guard.enableProtection();
+
+		const animation = new PropertyAnimation();
+		animation.object = combatPattern;
+		animation.property = 'shotsPerSecond';
+		animation.targetValue = 2;
+		animation.duration = 4;
+		animation.delay = 3;
+
+		this.animationSystem.add( animation );
+
+		this.addGuard( guard );
+
+		// pursuer
+
+		const pursuerCount = 12;
+
+		for ( let i = 0; i < pursuerCount; i ++ ) {
+
+			const pursuer = this._createPursuer();
+			pursuer.maxSpeed = 2;
+
+			const x = - 5 + ( i % 4 ) * 3;
+			const z = - 4 + Math.floor( i / 4 ) * 3;
+
+			pursuer.position.set( x, 0.5, z );
+
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+			combatPattern.destructibleProjectiles = 1;
+			pursuer.setCombatPattern( combatPattern );
+			pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			this.addPursuer( pursuer );
 
 		}
 
@@ -1186,6 +1266,10 @@ class World {
 
 			case 9:
 				this._loadStage09();
+				break;
+
+			case 10:
+				this._loadStage10();
 				break;
 
 			default:

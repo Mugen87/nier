@@ -225,8 +225,11 @@ class Player extends MovingEntity {
 
 		// ensure player does not leave the game area
 
-		this.position.x = MathUtils.clamp( this.position.x, - ( world.field.x - this.boundingRadius ), ( world.field.x - this.boundingRadius ) );
-		this.position.z = MathUtils.clamp( this.position.z, - ( world.field.z - this.boundingRadius ), ( world.field.z - this.boundingRadius ) );
+		const fieldXHalfSize = world.field.x / 2;
+		const fieldZHalfSize = world.field.z / 2;
+
+		this.position.x = MathUtils.clamp( this.position.x, - ( fieldXHalfSize - this.boundingRadius ), ( fieldXHalfSize - this.boundingRadius ) );
+		this.position.z = MathUtils.clamp( this.position.z, - ( fieldZHalfSize - this.boundingRadius ), ( fieldZHalfSize - this.boundingRadius ) );
 
 		return this;
 

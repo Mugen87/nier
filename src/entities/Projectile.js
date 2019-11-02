@@ -22,8 +22,11 @@ class Projectile extends MovingEntity {
 
 		const world = this.owner.world;
 
-		if ( this.position.x > world.field.x || this.position.x < - world.field.x ||
-			this.position.z > world.field.z || this.position.z < - world.field.z ) {
+		const fieldXHalfSize = world.field.x / 2;
+		const fieldZHalfSize = world.field.z / 2;
+
+		if ( this.position.x > fieldXHalfSize || this.position.x < - fieldXHalfSize ||
+			this.position.z > fieldZHalfSize || this.position.z < - fieldZHalfSize ) {
 
 			world.removeProjectile( this );
 			return;
