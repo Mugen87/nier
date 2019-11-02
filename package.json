@@ -33,6 +33,10 @@
     "eslint-config-mdcs": "^4.2.3",
     "google-closure-compiler": "^20190929.0.0",
     "http-server": "0.9.0",
-    "rollup": "^1.26.0"
+    "rollup": "^1.26.0",
+    "rollup-plugin-node-resolve": "^5.2.0"
+  },
+  "dependencies": {
+    "three": "^0.110.0"
   }
 }
