@@ -1,3 +1,8 @@
+/**
+ * @author Mugen87 / https://github.com/Mugen87
+ */
+
+
 import { PursuitBehavior, State } from '../lib/yuka.module.js';
 
 class MovementPattern extends State {

@@ -1,11 +1,11 @@
+/**
+ * @author Mugen87 / https://github.com/Mugen87
+ */
+
 import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from '../patterns/CombatPatterns';
 import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, PursuitBehaviorMovementPattern } from '../patterns/MovementPatterns';
 import { Obstacle } from '../entities/Obstacle';
 import { PropertyAnimation } from './AnimationSystem';
-
-/**
- * @author Mugen87 / https://github.com/Mugen87
- */
 
 class StageManager {
 

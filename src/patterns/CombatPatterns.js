@@ -1,3 +1,8 @@
+/**
+ * @author Mugen87 / https://github.com/Mugen87
+ */
+
+
 import { State, Vector3 } from '../lib/yuka.module.js';
 import { EnemyProjectile } from '../entities/EnemyProjectile.js';
 

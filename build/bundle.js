@@ -64563,6 +64563,10 @@
 
 	}
 
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
 	const direction$3 = new Vector3$1();
 	const target$5 = new Vector3$1();
 
@@ -64748,6 +64752,10 @@
 		}
 
 	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
 
 	class MovementPattern extends State {
 
