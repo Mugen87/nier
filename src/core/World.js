@@ -32,8 +32,8 @@ class World {
 		this.entityManager = new YUKA.EntityManager();
 		this.time = new YUKA.Time();
 
-		this.currentStage = 10;
-		this.maxStage = 10;
+		this.currentStage = 11;
+		this.maxStage = 11;
 
 		this.field = new YUKA.Vector3( 15, 1, 15 );
 		this.fieldMesh = null;
@@ -854,6 +854,138 @@ class World {
 
 	}
 
+	_loadStage11() {
+
+		this.guardsProtected = true;
+
+		// field
+
+		this.updateField( 25, 1, 25 );
+
+		// controls
+
+		this.controls.setPosition( 0, 0.5, 7 );
+		this.controls.resetRotation();
+
+		// guard
+
+		const guard = this._createGuard();
+		guard.updateOrientation = false;
+		guard.position.set( 0, 0.5, - 10 );
+		const combatPattern = new SpreadCombatPattern();
+		combatPattern.projectilesPerShot = 8;
+		combatPattern.destructibleProjectiles = 0.5;
+		combatPattern.shotsPerSecond = 0.1;
+		guard.setCombatPattern( combatPattern );
+		guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+		guard.enableProtection();
+
+		const animation = new PropertyAnimation();
+		animation.object = combatPattern;
+		animation.property = 'shotsPerSecond';
+		animation.targetValue = 8;
+		animation.duration = 4;
+		animation.delay = 4;
+
+		this.animationSystem.add( animation );
+
+		this.addGuard( guard );
+
+		// puruser
+
+		const scope = this;
+
+		function createPursuer() {
+
+			const pursuer = scope._createPursuer();
+			pursuer.maxSpeed = 2;
+
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+			combatPattern.destructibleProjectiles = 1;
+			pursuer.setCombatPattern( combatPattern );
+			pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			return pursuer;
+
+		}
+
+		// pursuers behind obstacles
+
+		let pursuer = createPursuer();
+		pursuer.position.set( 0, 0.5, 11 );
+		this.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( - 10, 0.5, 1 );
+		this.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( 10, 0.5, 1 );
+		this.addPursuer( pursuer );
+
+		// pursuers in front of guard
+
+		const pursuerCount = 6;
+
+		for ( let i = 0; i < pursuerCount; i ++ ) {
+
+			pursuer = createPursuer();
+
+			const x = - 3 + ( i % 3 ) * 3;
+			const z = - 3 + Math.floor( i / 3 ) * 3;
+
+			pursuer.position.set( x, 0.5, z );
+			this.addPursuer( pursuer );
+
+		}
+
+		// obstacles
+
+		// bottom row
+
+		let obstacle = new Obstacle();
+		obstacle.position.set( 0, 0.5, 9 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 1.25, 0.5, 9 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 1.25, 0.5, 9 );
+		this.addObstacle( obstacle );
+
+		// left row
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 8, 0.5, - 1.25 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 8, 0.5, 0 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 8, 0.5, 1.25 );
+		this.addObstacle( obstacle );
+
+		// right row
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 8, 0.5, - 1.25 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 8, 0.5, 0 );
+		this.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 8, 0.5, 1.25 );
+		this.addObstacle( obstacle );
+
+	}
+
 	_createGuard() {
 
 		const guard = new Guard( this );
@@ -1301,6 +1433,10 @@ class World {
 
 			case 10:
 				this._loadStage10();
+				break;
+
+			case 11:
+				this._loadStage11();
 				break;
 
 			default:

@@ -72,7 +72,7 @@ class PursuitBehaviorMovementPattern extends MovementPattern {
 
 	enter( enemy ) {
 
-		const pursuitBehavior = new PursuitBehavior( enemy.world.player, 2 );
+		const pursuitBehavior = new PursuitBehavior( enemy.world.player );
 		enemy.steering.add( pursuitBehavior );
 
 	}
