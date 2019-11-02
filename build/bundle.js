@@ -64803,7 +64803,7 @@
 
 		init() {
 
-			this.assetManager = new AssetManager(); // creating the assset manager here to avoid a web audio context warning
+			this.assetManager = new AssetManager(); // creating the asset manager here to avoid a web audio context warning
 
 			this.assetManager.init().then( () => {
 
@@ -64826,11 +64826,9 @@
 
 			if ( this.active ) {
 
-				// animations
+				// game logic
 
 				this.animationSystem.update( delta );
-
-				// game logic
 
 				this.controls.update( delta );
 				this.entityManager.update( delta );
@@ -65214,6 +65212,10 @@
 
 		_loadStage01() {
 
+			// field
+
+			this.updateField( 15, 1, 15 );
+
 			// controls
 
 			this.controls.setPosition( 0, 0.5, 5 );
@@ -65230,6 +65232,10 @@
 		}
 
 		_loadStage02() {
+
+			// field
+
+			this.updateField( 15, 1, 15 );
 
 			// controls
 
@@ -65251,6 +65257,10 @@
 
 		_loadStage03() {
 
+			// field
+
+			this.updateField( 15, 1, 15 );
+
 			// controls
 
 			this.controls.setPosition( 0, 0.5, 5 );
@@ -65268,6 +65278,10 @@
 		}
 
 		_loadStage04() {
+
+			// field
+
+			this.updateField( 15, 1, 15 );
 
 			// controls
 
@@ -65289,6 +65303,10 @@
 		}
 
 		_loadStage05() {
+
+			// field
+
+			this.updateField( 15, 1, 15 );
 
 			// controls
 
@@ -65335,6 +65353,10 @@
 
 			this.guardsProtected = true;
 
+			// field
+
+			this.updateField( 15, 1, 15 );
+
 			// controls
 
 			this.controls.setPosition( 0, 0.5, 5 );
@@ -65379,6 +65401,10 @@
 		_loadStage08() {
 
 			this.guardsProtected = true;
+
+			// field
+
+			this.updateField( 15, 1, 15 );
 
 			// controls
 
@@ -65425,6 +65451,10 @@
 		}
 
 		_loadStage09() {
+
+			// field
+
+			this.updateField( 15, 1, 15 );
 
 			// controls
 
