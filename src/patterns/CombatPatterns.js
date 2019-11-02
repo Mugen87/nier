@@ -84,6 +84,7 @@ class SpreadCombatPattern extends CombatPattern {
 		this.shotsPerSecond = 1;
 		this.projectilesPerShot = 6;
 		this.enableRotation = true;
+		this.rotationSpeed = 1;
 
 	}
 
@@ -100,7 +101,7 @@ class SpreadCombatPattern extends CombatPattern {
 
 				let s = ( 2 * Math.PI * ( i / this.projectilesPerShot ) );
 
-				if ( this.enableRotation ) s += elapsedTime;
+				if ( this.enableRotation ) s += elapsedTime * this.rotationSpeed;
 
 				target.copy( enemy.position );
 				target.x += Math.sin( s );

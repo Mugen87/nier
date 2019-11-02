@@ -64354,353 +64354,6 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
-	class Obstacle extends GameEntity {
-
-		constructor() {
-
-			super();
-
-			this.boundingRadius = 0.75;
-
-			this.aabb = new AABB();
-			this.obb = new OBB();
-
-			this.needsUpdate = true; // controls update of render component since obstacles are mostly static
-
-			this.size = new Vector3$1( 1, 1, 1 );
-
-		}
-
-		updateBoundingVolumes() {
-
-			this.aabb.fromCenterAndSize( this.position, this.size );
-
-			this.obb.center.copy( this.position );
-			this.obb.halfSizes.copy( this.size ).multiplyScalar( 0.5 );
-
-		}
-
-	}
-
-	class MovementPattern extends State {
-
-		constructor() {
-
-			super();
-
-			this.speed = 1.5;
-			this.spread = 4;
-
-		}
-
-	}
-
-	class LeftRightMovementPattern extends MovementPattern {
-
-		execute( enemy ) {
-
-			const elapsedTime = enemy.world.time.getElapsed();
-
-			enemy.position.x = Math.cos( elapsedTime * this.speed ) * this.spread;
-
-		}
-
-	}
-
-	class WavyMovementPattern extends MovementPattern {
-
-		constructor() {
-
-			super();
-
-			this.offset = - 3;
-
-		}
-
-		execute( enemy ) {
-
-			const t = enemy.world.time.getElapsed() * this.speed;
-
-			enemy.position.x = Math.cos( t ) * this.spread;
-			enemy.position.z = this.offset + ( Math.sin( t ) * Math.cos( t ) * this.spread );
-
-
-		}
-
-	}
-
-	class CircleMovementPattern extends MovementPattern {
-
-		constructor() {
-
-			super();
-
-			this.spread = 3;
-
-		}
-
-		execute( enemy ) {
-
-			const t = enemy.world.time.getElapsed() * this.speed;
-
-			enemy.position.x = Math.sin( t ) * this.spread;
-			enemy.position.z = - Math.cos( t ) * this.spread;
-
-		}
-
-	}
-
-	class PursuitBehaviorMovementPattern extends MovementPattern {
-
-		enter( enemy ) {
-
-			const pursuitBehavior = new PursuitBehavior( enemy.world.player );
-			enemy.steering.add( pursuitBehavior );
-
-		}
-
-		exit( enemy ) {
-
-			enemy.steering.clear();
-
-		}
-
-	}
-
-	/**
-	 * @author Mugen87 / https://github.com/Mugen87
-	 */
-
-	const target$4 = new Vector3$1();
-
-	class EnemyProjectile extends Projectile {
-
-		constructor( owner = null, direction ) {
-
-			super( owner );
-
-			this.expiryTime = owner.world.time.getElapsed() + 5;
-
-			this.boundingRadius = 0.4;
-			this.boundingSphere = new BoundingSphere();
-			this.boundingSphere.radius = this.boundingRadius;
-
-			this.maxSpeed = 10; // world units/seconds
-
-			this.velocity.copy( direction ).multiplyScalar( this.maxSpeed );
-			this.position.copy( this.owner.position );
-			this.position.y = 0.4; // slightly raise the projectile
-			this.updateWorldMatrix();
-
-			target$4.copy( this.position ).add( this.velocity );
-			this.lookAt( target$4 ); // ensure GameEntity.rotation is up to date
-
-			this.isEnemyProjectile = true;
-			this.isDestructible = false;
-
-		}
-
-		update( delta ) {
-
-			super.update( delta );
-
-			// update bounding sphere
-
-			this.boundingSphere.center.copy( this.position );
-
-		}
-
-	}
-
-	const direction$3 = new Vector3$1();
-	const target$5 = new Vector3$1();
-
-	class CombatPattern extends State {
-
-		constructor() {
-
-			super();
-
-			this.shotsPerSecond = 0.5;
-			this.projectilesPerShot = 3;
-			this.destructibleProjectiles = 0; // amount of destructible projectiles per shot [0,1]
-
-			this._lastShotTime = 0;
-
-		}
-
-		enter( enemy ) {
-
-			this._lastShotTime = enemy.world.time.getElapsed();
-
-		}
-
-	}
-
-	class DefaultCombatPattern extends CombatPattern {
-
-		constructor() {
-
-			super();
-
-			this.angularStep = Math.PI * 0.167; // 30 degrees;
-
-		}
-
-		execute( enemy ) {
-
-			const world = enemy.world;
-			const elapsedTime = world.time.getElapsed();
-
-			const halfAngle = this.angularStep * ( this.projectilesPerShot - 1 ) / 2;
-
-			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
-
-				this._lastShotTime = elapsedTime;
-
-				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
-
-					const s = halfAngle - this.angularStep * i;
-
-					target$5.copy( enemy.position );
-					target$5.x += Math.sin( s );
-					target$5.z += Math.cos( s );
-
-					direction$3.subVectors( target$5, enemy.position ).normalize();
-					direction$3.applyRotation( enemy.rotation );
-
-					const projectile = new EnemyProjectile( enemy, direction$3 );
-
-					if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
-
-					world.addProjectile( projectile );
-
-				}
-
-				const audio = enemy.audios.get( 'enemyShot' );
-				world.playAudio( audio );
-
-			}
-
-		}
-
-	}
-
-	class SpreadCombatPattern extends CombatPattern {
-
-		constructor() {
-
-			super();
-
-			this.shotsPerSecond = 1;
-			this.projectilesPerShot = 6;
-			this.enableRotation = true;
-
-		}
-
-		execute( enemy ) {
-
-			const world = enemy.world;
-			const elapsedTime = world.time.getElapsed();
-
-			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
-
-				this._lastShotTime = elapsedTime;
-
-				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
-
-					let s = ( 2 * Math.PI * ( i / this.projectilesPerShot ) );
-
-					if ( this.enableRotation ) s += elapsedTime;
-
-					target$5.copy( enemy.position );
-					target$5.x += Math.sin( s );
-					target$5.z += Math.cos( s );
-
-					direction$3.subVectors( target$5, enemy.position ).normalize();
-					direction$3.applyRotation( enemy.rotation );
-
-					const projectile = new EnemyProjectile( enemy, direction$3 );
-
-					if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
-
-					world.addProjectile( projectile );
-
-				}
-
-				const audio = enemy.audios.get( 'enemyShot' );
-				world.playAudio( audio );
-
-			}
-
-		}
-
-	}
-
-	class FocusCombatPattern extends CombatPattern {
-
-		constructor() {
-
-			super();
-
-			this.shotsPerSecond = 10;
-
-			this.shotDuration = 1; // seconds
-			this.pauseDuration = 0.5; // seconds
-
-			this.shooting = true;
-
-			this._nextPauseTime = Infinity;
-			this._nextShotTime = - Infinity;
-
-		}
-
-		execute( enemy ) {
-
-			const world = enemy.world;
-			const elapsedTime = world.time.getElapsed();
-
-			if ( elapsedTime > this._nextPauseTime ) {
-
-				this.shooting = false;
-				this._nextPauseTime = Infinity;
-				this._nextShotTime = elapsedTime + this.pauseDuration;
-
-			}
-
-			if ( elapsedTime > this._nextShotTime ) {
-
-				this.shooting = true;
-				this._nextShotTime = Infinity;
-				this._nextPauseTime = elapsedTime + this.shotDuration;
-
-			}
-
-			if ( this.shooting === true && ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) ) {
-
-				this._lastShotTime = elapsedTime;
-
-				enemy.getDirection( direction$3 );
-
-				const projectile = new EnemyProjectile( enemy, direction$3 );
-
-				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
-
-				world.addProjectile( projectile );
-
-				const audio = enemy.audios.get( 'enemyShot' );
-				world.playAudio( audio );
-
-			}
-
-		}
-
-	}
-
-	/**
-	 * @author Mugen87 / https://github.com/Mugen87
-	 */
-
 	class PursuerGeometry extends BufferGeometry {
 
 		constructor() {
@@ -64869,6 +64522,924 @@
 	 * @author Mugen87 / https://github.com/Mugen87
 	 */
 
+	const target$4 = new Vector3$1();
+
+	class EnemyProjectile extends Projectile {
+
+		constructor( owner = null, direction ) {
+
+			super( owner );
+
+			this.expiryTime = owner.world.time.getElapsed() + 5;
+
+			this.boundingRadius = 0.4;
+			this.boundingSphere = new BoundingSphere();
+			this.boundingSphere.radius = this.boundingRadius;
+
+			this.maxSpeed = 10; // world units/seconds
+
+			this.velocity.copy( direction ).multiplyScalar( this.maxSpeed );
+			this.position.copy( this.owner.position );
+			this.position.y = 0.4; // slightly raise the projectile
+			this.updateWorldMatrix();
+
+			target$4.copy( this.position ).add( this.velocity );
+			this.lookAt( target$4 ); // ensure GameEntity.rotation is up to date
+
+			this.isEnemyProjectile = true;
+			this.isDestructible = false;
+
+		}
+
+		update( delta ) {
+
+			super.update( delta );
+
+			// update bounding sphere
+
+			this.boundingSphere.center.copy( this.position );
+
+		}
+
+	}
+
+	const direction$3 = new Vector3$1();
+	const target$5 = new Vector3$1();
+
+	class CombatPattern extends State {
+
+		constructor() {
+
+			super();
+
+			this.shotsPerSecond = 0.5;
+			this.projectilesPerShot = 3;
+			this.destructibleProjectiles = 0; // amount of destructible projectiles per shot [0,1]
+
+			this._lastShotTime = 0;
+
+		}
+
+		enter( enemy ) {
+
+			this._lastShotTime = enemy.world.time.getElapsed();
+
+		}
+
+	}
+
+	class DefaultCombatPattern extends CombatPattern {
+
+		constructor() {
+
+			super();
+
+			this.angularStep = Math.PI * 0.167; // 30 degrees;
+
+		}
+
+		execute( enemy ) {
+
+			const world = enemy.world;
+			const elapsedTime = world.time.getElapsed();
+
+			const halfAngle = this.angularStep * ( this.projectilesPerShot - 1 ) / 2;
+
+			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
+
+				this._lastShotTime = elapsedTime;
+
+				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
+
+					const s = halfAngle - this.angularStep * i;
+
+					target$5.copy( enemy.position );
+					target$5.x += Math.sin( s );
+					target$5.z += Math.cos( s );
+
+					direction$3.subVectors( target$5, enemy.position ).normalize();
+					direction$3.applyRotation( enemy.rotation );
+
+					const projectile = new EnemyProjectile( enemy, direction$3 );
+
+					if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
+
+					world.addProjectile( projectile );
+
+				}
+
+				const audio = enemy.audios.get( 'enemyShot' );
+				world.playAudio( audio );
+
+			}
+
+		}
+
+	}
+
+	class SpreadCombatPattern extends CombatPattern {
+
+		constructor() {
+
+			super();
+
+			this.shotsPerSecond = 1;
+			this.projectilesPerShot = 6;
+			this.enableRotation = true;
+			this.rotationSpeed = 1;
+
+		}
+
+		execute( enemy ) {
+
+			const world = enemy.world;
+			const elapsedTime = world.time.getElapsed();
+
+			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
+
+				this._lastShotTime = elapsedTime;
+
+				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
+
+					let s = ( 2 * Math.PI * ( i / this.projectilesPerShot ) );
+
+					if ( this.enableRotation ) s += elapsedTime * this.rotationSpeed;
+
+					target$5.copy( enemy.position );
+					target$5.x += Math.sin( s );
+					target$5.z += Math.cos( s );
+
+					direction$3.subVectors( target$5, enemy.position ).normalize();
+					direction$3.applyRotation( enemy.rotation );
+
+					const projectile = new EnemyProjectile( enemy, direction$3 );
+
+					if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
+
+					world.addProjectile( projectile );
+
+				}
+
+				const audio = enemy.audios.get( 'enemyShot' );
+				world.playAudio( audio );
+
+			}
+
+		}
+
+	}
+
+	class FocusCombatPattern extends CombatPattern {
+
+		constructor() {
+
+			super();
+
+			this.shotsPerSecond = 10;
+
+			this.shotDuration = 1; // seconds
+			this.pauseDuration = 0.5; // seconds
+
+			this.shooting = true;
+
+			this._nextPauseTime = Infinity;
+			this._nextShotTime = - Infinity;
+
+		}
+
+		execute( enemy ) {
+
+			const world = enemy.world;
+			const elapsedTime = world.time.getElapsed();
+
+			if ( elapsedTime > this._nextPauseTime ) {
+
+				this.shooting = false;
+				this._nextPauseTime = Infinity;
+				this._nextShotTime = elapsedTime + this.pauseDuration;
+
+			}
+
+			if ( elapsedTime > this._nextShotTime ) {
+
+				this.shooting = true;
+				this._nextShotTime = Infinity;
+				this._nextPauseTime = elapsedTime + this.shotDuration;
+
+			}
+
+			if ( this.shooting === true && ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) ) {
+
+				this._lastShotTime = elapsedTime;
+
+				enemy.getDirection( direction$3 );
+
+				const projectile = new EnemyProjectile( enemy, direction$3 );
+
+				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
+
+				world.addProjectile( projectile );
+
+				const audio = enemy.audios.get( 'enemyShot' );
+				world.playAudio( audio );
+
+			}
+
+		}
+
+	}
+
+	class MovementPattern extends State {
+
+		constructor() {
+
+			super();
+
+			this.speed = 1.5;
+			this.spread = 4;
+
+		}
+
+	}
+
+	class LeftRightMovementPattern extends MovementPattern {
+
+		execute( enemy ) {
+
+			const elapsedTime = enemy.world.time.getElapsed();
+
+			enemy.position.x = Math.cos( elapsedTime * this.speed ) * this.spread;
+
+		}
+
+	}
+
+	class WavyMovementPattern extends MovementPattern {
+
+		constructor() {
+
+			super();
+
+			this.offset = - 3;
+
+		}
+
+		execute( enemy ) {
+
+			const t = enemy.world.time.getElapsed() * this.speed;
+
+			enemy.position.x = Math.cos( t ) * this.spread;
+			enemy.position.z = this.offset + ( Math.sin( t ) * Math.cos( t ) * this.spread );
+
+
+		}
+
+	}
+
+	class CircleMovementPattern extends MovementPattern {
+
+		constructor() {
+
+			super();
+
+			this.spread = 3;
+
+		}
+
+		execute( enemy ) {
+
+			const t = enemy.world.time.getElapsed() * this.speed;
+
+			enemy.position.x = Math.sin( t ) * this.spread;
+			enemy.position.z = - Math.cos( t ) * this.spread;
+
+		}
+
+	}
+
+	class PursuitBehaviorMovementPattern extends MovementPattern {
+
+		enter( enemy ) {
+
+			const pursuitBehavior = new PursuitBehavior( enemy.world.player );
+			enemy.steering.add( pursuitBehavior );
+
+		}
+
+		exit( enemy ) {
+
+			enemy.steering.clear();
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
+	class Obstacle extends GameEntity {
+
+		constructor() {
+
+			super();
+
+			this.boundingRadius = 0.75;
+
+			this.aabb = new AABB();
+			this.obb = new OBB();
+
+			this.needsUpdate = true; // controls update of render component since obstacles are mostly static
+
+			this.size = new Vector3$1( 1, 1, 1 );
+
+		}
+
+		updateBoundingVolumes() {
+
+			this.aabb.fromCenterAndSize( this.position, this.size );
+
+			this.obb.center.copy( this.position );
+			this.obb.halfSizes.copy( this.size ).multiplyScalar( 0.5 );
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
+	class StageManager {
+
+		constructor( world ) {
+
+			this.world = world;
+
+		}
+
+		load( id ) {
+
+			switch ( id ) {
+
+				case 1:
+					this._loadStage01();
+					break;
+
+				case 2:
+					this._loadStage02();
+					break;
+
+				case 3:
+					this._loadStage03();
+					break;
+
+				case 4:
+					this._loadStage04();
+					break;
+
+				case 5:
+					this._loadStage05();
+					break;
+
+				case 6:
+					this._loadStage06();
+					break;
+
+				case 7:
+					this._loadStage07();
+					break;
+
+				case 8:
+					this._loadStage08();
+					break;
+
+				case 9:
+					this._loadStage09();
+					break;
+
+				case 10:
+					this._loadStage10();
+					break;
+
+				case 11:
+					this._loadStage11();
+					break;
+
+				default:
+					console.error( 'StageManager: Unknown level ID', id );
+
+			}
+
+		}
+
+		_loadStage01() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 4 );
+			guard.setCombatPattern( new DefaultCombatPattern() );
+			guard.setMovementPattern( new LeftRightMovementPattern() );
+			world.addGuard( guard );
+
+		}
+
+		_loadStage02() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, 0 );
+			const combatPattern = new DefaultCombatPattern();
+			combatPattern.shotsPerSecond = 1;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new WavyMovementPattern() );
+
+			world.addGuard( guard );
+
+		}
+
+		_loadStage03() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, 0 );
+			guard.setCombatPattern( new SpreadCombatPattern() );
+			guard.setMovementPattern( new CircleMovementPattern() );
+
+			world.addGuard( guard );
+
+		}
+
+		_loadStage04() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 4 );
+			const combatPattern = new DefaultCombatPattern();
+			combatPattern.shotsPerSecond = 2;
+			combatPattern.destructibleProjectiles = 1;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new LeftRightMovementPattern() );
+
+			world.addGuard( guard );
+
+		}
+
+		_loadStage05() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.maxSpeed = 2;
+			guard.position.set( 0, 0.5, - 4 );
+			const combatPattern = new SpreadCombatPattern();
+			combatPattern.shotsPerSecond = 2;
+			combatPattern.enableRotation = false;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			world.addGuard( guard );
+
+		}
+
+		_loadStage06() {
+
+			const world = this.world;
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.maxSpeed = 2;
+			guard.position.set( 0, 0.5, - 4 );
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.destructibleProjectiles = 0.5;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			world.addGuard( guard );
+
+		}
+
+		_loadStage07() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 6 );
+			guard.setCombatPattern( new DefaultCombatPattern() );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+			guard.enableProtection();
+
+			world.addGuard( guard );
+
+			// pursuer
+
+			const pursuerCount = 7;
+
+			for ( let i = 0; i < pursuerCount; i ++ ) {
+
+				const pursuer = world._createPursuer();
+				pursuer.maxSpeed = 2;
+
+				const s = Math.PI * ( i / pursuerCount );
+				const x = Math.cos( s ) * 4;
+				const z = - 4 + Math.sin( s ) * 4;
+
+				pursuer.position.set( x, 0.5, z );
+
+				const combatPattern = new DefaultCombatPattern();
+				combatPattern.projectilesPerShot = 0;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				world.addPursuer( pursuer );
+
+			}
+
+		}
+
+		_loadStage08() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 6 );
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.pauseDuration = 1;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+			guard.enableProtection();
+
+			world.addGuard( guard );
+
+			// pursuer
+
+			const pursuerCount = 7;
+
+			for ( let i = 0; i < pursuerCount; i ++ ) {
+
+				const pursuer = world._createPursuer();
+				pursuer.maxSpeed = 2;
+
+				const s = Math.PI * ( i / pursuerCount );
+				const x = Math.cos( s ) * 4;
+				const z = - 4 + Math.sin( s ) * 4;
+
+				pursuer.position.set( x, 0.5, z );
+
+				const combatPattern = new FocusCombatPattern();
+				combatPattern.shotsPerSecond = 1;
+				combatPattern.destructibleProjectiles = 1;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				world.addPursuer( pursuer );
+
+			}
+
+		}
+
+		_loadStage09() {
+
+			const world = this.world;
+
+			// field
+
+			world.updateField( 15, 1, 15 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 5 );
+			world.controls.resetRotation();
+
+			// enemies
+
+			const guardCount = 2;
+
+			for ( let i = 0; i < guardCount; i ++ ) {
+
+				const guard = world._createGuard();
+				guard.position.set( 3 - ( i * 6 ), 0.5, - 6 );
+
+				const combatPattern = new SpreadCombatPattern();
+				combatPattern.projectilesPerShot = 4;
+				combatPattern.shotsPerSecond = 8;
+				combatPattern.enableRotation = false;
+				guard.setCombatPattern( combatPattern );
+
+				const movementPattern = new PursuitBehaviorMovementPattern();
+				guard.setMovementPattern( movementPattern );
+				world.addGuard( guard );
+
+			}
+
+			// obstacles
+
+			const obstacleCount = 5;
+
+			for ( let i = 0; i < obstacleCount; i ++ ) {
+
+				const obstacle = new Obstacle();
+				obstacle.position.set( 6 - ( i * 3 ), 0.5, 2 );
+				world.addObstacle( obstacle );
+
+			}
+
+		}
+
+		_loadStage10() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 25, 1, 25 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 10 );
+			world.controls.resetRotation();
+
+			// guard
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, 0 );
+			const combatPattern = new DefaultCombatPattern();
+			combatPattern.projectilesPerShot = 5;
+			combatPattern.destructibleProjectiles = 0.5;
+			combatPattern.shotsPerSecond = 0.1;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+			guard.enableProtection();
+
+			const animation = new PropertyAnimation();
+			animation.object = combatPattern;
+			animation.property = 'shotsPerSecond';
+			animation.targetValue = 2;
+			animation.duration = 4;
+			animation.delay = 3;
+
+			world.animationSystem.add( animation );
+
+			world.addGuard( guard );
+
+			// pursuer
+
+			const pursuerCount = 12;
+
+			for ( let i = 0; i < pursuerCount; i ++ ) {
+
+				const pursuer = world._createPursuer();
+				pursuer.maxSpeed = 2;
+
+				const x = - 5 + ( i % 4 ) * 3;
+				const z = - 4 + Math.floor( i / 4 ) * 3;
+
+				pursuer.position.set( x, 0.5, z );
+
+				const combatPattern = new FocusCombatPattern();
+				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+				combatPattern.destructibleProjectiles = 1;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				world.addPursuer( pursuer );
+
+			}
+
+		}
+
+		_loadStage11() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 25, 1, 25 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 7 );
+			world.controls.resetRotation();
+
+			// guard
+
+			const guard = world._createGuard();
+			guard.updateOrientation = false;
+			guard.position.set( 0, 0.5, - 10 );
+			const combatPattern = new SpreadCombatPattern();
+			combatPattern.projectilesPerShot = 8;
+			combatPattern.destructibleProjectiles = 0.5;
+			combatPattern.shotsPerSecond = 0.1;
+			combatPattern.rotationSpeed = 0.4;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+			guard.enableProtection();
+
+			const animation = new PropertyAnimation();
+			animation.object = combatPattern;
+			animation.property = 'shotsPerSecond';
+			animation.targetValue = 8;
+			animation.duration = 4;
+			animation.delay = 4;
+
+			world.animationSystem.add( animation );
+
+			world.addGuard( guard );
+
+			// puruser
+
+			function createPursuer() {
+
+				const pursuer = world._createPursuer();
+				pursuer.maxSpeed = 2;
+
+				const combatPattern = new FocusCombatPattern();
+				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+				combatPattern.destructibleProjectiles = 1;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				return pursuer;
+
+			}
+
+			// pursuers behind obstacles
+
+			let pursuer = createPursuer();
+			pursuer.position.set( 0, 0.5, 11 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 10, 0.5, 1 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( 10, 0.5, 1 );
+			world.addPursuer( pursuer );
+
+			// pursuers in front of guard
+
+			const pursuerCount = 6;
+
+			for ( let i = 0; i < pursuerCount; i ++ ) {
+
+				pursuer = createPursuer();
+
+				const x = - 3 + ( i % 3 ) * 3;
+				const z = - 3 + Math.floor( i / 3 ) * 3;
+
+				pursuer.position.set( x, 0.5, z );
+				world.addPursuer( pursuer );
+
+			}
+
+			// obstacles
+
+			// bottom row
+
+			let obstacle = new Obstacle();
+			obstacle.position.set( 0, 0.5, 9 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( - 1.25, 0.5, 9 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( 1.25, 0.5, 9 );
+			world.addObstacle( obstacle );
+
+			// left row
+
+			obstacle = new Obstacle();
+			obstacle.position.set( - 8, 0.5, - 1.25 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( - 8, 0.5, 0 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( - 8, 0.5, 1.25 );
+			world.addObstacle( obstacle );
+
+			// right row
+
+			obstacle = new Obstacle();
+			obstacle.position.set( 8, 0.5, - 1.25 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( 8, 0.5, 0 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( 8, 0.5, 1.25 );
+			world.addObstacle( obstacle );
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
 	const toVector = new Vector3$1();
 	const displacement$5 = new Vector3$1();
 
@@ -64923,6 +65494,7 @@
 			this.assetManager = null;
 
 			this.animationSystem = new AnimationSystem();
+			this.stageManager = new StageManager( this );
 
 			this._requestID = null;
 
@@ -65356,486 +65928,6 @@
 
 		}
 
-		_loadStage01() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, - 4 );
-			guard.setCombatPattern( new DefaultCombatPattern() );
-			guard.setMovementPattern( new LeftRightMovementPattern() );
-			this.addGuard( guard );
-
-		}
-
-		_loadStage02() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, 0 );
-			const combatPattern = new DefaultCombatPattern();
-			combatPattern.shotsPerSecond = 1;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new WavyMovementPattern() );
-
-			this.addGuard( guard );
-
-		}
-
-		_loadStage03() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, 0 );
-			guard.setCombatPattern( new SpreadCombatPattern() );
-			guard.setMovementPattern( new CircleMovementPattern() );
-
-			this.addGuard( guard );
-
-		}
-
-		_loadStage04() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, - 4 );
-			const combatPattern = new DefaultCombatPattern();
-			combatPattern.shotsPerSecond = 2;
-			combatPattern.destructibleProjectiles = 1;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new LeftRightMovementPattern() );
-
-			this.addGuard( guard );
-
-		}
-
-		_loadStage05() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.maxSpeed = 2;
-			guard.position.set( 0, 0.5, - 4 );
-			const combatPattern = new SpreadCombatPattern();
-			combatPattern.shotsPerSecond = 2;
-			combatPattern.enableRotation = false;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-			this.addGuard( guard );
-
-		}
-
-		_loadStage06() {
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.maxSpeed = 2;
-			guard.position.set( 0, 0.5, - 4 );
-			const combatPattern = new FocusCombatPattern();
-			combatPattern.destructibleProjectiles = 0.5;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-			this.addGuard( guard );
-
-		}
-
-		_loadStage07() {
-
-			this.guardsProtected = true;
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, - 6 );
-			guard.setCombatPattern( new DefaultCombatPattern() );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-			guard.enableProtection();
-
-			this.addGuard( guard );
-
-			// pursuer
-
-			const pursuerCount = 7;
-
-			for ( let i = 0; i < pursuerCount; i ++ ) {
-
-				const pursuer = this._createPursuer();
-				pursuer.maxSpeed = 2;
-
-				const s = Math.PI * ( i / pursuerCount );
-				const x = Math.cos( s ) * 4;
-				const z = - 4 + Math.sin( s ) * 4;
-
-				pursuer.position.set( x, 0.5, z );
-
-				const combatPattern = new DefaultCombatPattern();
-				combatPattern.projectilesPerShot = 0;
-				pursuer.setCombatPattern( combatPattern );
-				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-				this.addPursuer( pursuer );
-
-			}
-
-		}
-
-		_loadStage08() {
-
-			this.guardsProtected = true;
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, - 6 );
-			const combatPattern = new FocusCombatPattern();
-			combatPattern.pauseDuration = 1;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-			guard.enableProtection();
-
-			this.addGuard( guard );
-
-			// pursuer
-
-			const pursuerCount = 7;
-
-			for ( let i = 0; i < pursuerCount; i ++ ) {
-
-				const pursuer = this._createPursuer();
-				pursuer.maxSpeed = 2;
-
-				const s = Math.PI * ( i / pursuerCount );
-				const x = Math.cos( s ) * 4;
-				const z = - 4 + Math.sin( s ) * 4;
-
-				pursuer.position.set( x, 0.5, z );
-
-				const combatPattern = new FocusCombatPattern();
-				combatPattern.shotsPerSecond = 1;
-				combatPattern.destructibleProjectiles = 1;
-				pursuer.setCombatPattern( combatPattern );
-				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-				this.addPursuer( pursuer );
-
-			}
-
-		}
-
-		_loadStage09() {
-
-			// field
-
-			this.updateField( 15, 1, 15 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 5 );
-			this.controls.resetRotation();
-
-			// enemies
-
-			const guardCount = 2;
-
-			for ( let i = 0; i < guardCount; i ++ ) {
-
-				const guard = this._createGuard();
-				guard.position.set( 3 - ( i * 6 ), 0.5, - 6 );
-
-				const combatPattern = new SpreadCombatPattern();
-				combatPattern.projectilesPerShot = 4;
-				combatPattern.shotsPerSecond = 8;
-				combatPattern.enableRotation = false;
-				guard.setCombatPattern( combatPattern );
-
-				const movementPattern = new PursuitBehaviorMovementPattern();
-				guard.setMovementPattern( movementPattern );
-				this.addGuard( guard );
-
-			}
-
-			// obstacles
-
-			const obstacleCount = 5;
-
-			for ( let i = 0; i < obstacleCount; i ++ ) {
-
-				const obstacle = new Obstacle();
-				obstacle.position.set( 6 - ( i * 3 ), 0.5, 2 );
-				this.addObstacle( obstacle );
-
-			}
-
-		}
-
-		_loadStage10() {
-
-			this.guardsProtected = true;
-
-			// field
-
-			this.updateField( 25, 1, 25 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 10 );
-			this.controls.resetRotation();
-
-			// guard
-
-			const guard = this._createGuard();
-			guard.position.set( 0, 0.5, 0 );
-			const combatPattern = new DefaultCombatPattern();
-			combatPattern.projectilesPerShot = 5;
-			combatPattern.destructibleProjectiles = 0.5;
-			combatPattern.shotsPerSecond = 0.1;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-			guard.enableProtection();
-
-			const animation = new PropertyAnimation();
-			animation.object = combatPattern;
-			animation.property = 'shotsPerSecond';
-			animation.targetValue = 2;
-			animation.duration = 4;
-			animation.delay = 3;
-
-			this.animationSystem.add( animation );
-
-			this.addGuard( guard );
-
-			// pursuer
-
-			const pursuerCount = 12;
-
-			for ( let i = 0; i < pursuerCount; i ++ ) {
-
-				const pursuer = this._createPursuer();
-				pursuer.maxSpeed = 2;
-
-				const x = - 5 + ( i % 4 ) * 3;
-				const z = - 4 + Math.floor( i / 4 ) * 3;
-
-				pursuer.position.set( x, 0.5, z );
-
-				const combatPattern = new FocusCombatPattern();
-				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
-				combatPattern.destructibleProjectiles = 1;
-				pursuer.setCombatPattern( combatPattern );
-				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-				this.addPursuer( pursuer );
-
-			}
-
-		}
-
-		_loadStage11() {
-
-			this.guardsProtected = true;
-
-			// field
-
-			this.updateField( 25, 1, 25 );
-
-			// controls
-
-			this.controls.setPosition( 0, 0.5, 7 );
-			this.controls.resetRotation();
-
-			// guard
-
-			const guard = this._createGuard();
-			guard.updateOrientation = false;
-			guard.position.set( 0, 0.5, - 10 );
-			const combatPattern = new SpreadCombatPattern();
-			combatPattern.projectilesPerShot = 8;
-			combatPattern.destructibleProjectiles = 0.5;
-			combatPattern.shotsPerSecond = 0.1;
-			guard.setCombatPattern( combatPattern );
-			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
-			guard.enableProtection();
-
-			const animation = new PropertyAnimation();
-			animation.object = combatPattern;
-			animation.property = 'shotsPerSecond';
-			animation.targetValue = 8;
-			animation.duration = 4;
-			animation.delay = 4;
-
-			this.animationSystem.add( animation );
-
-			this.addGuard( guard );
-
-			// puruser
-
-			const scope = this;
-
-			function createPursuer() {
-
-				const pursuer = scope._createPursuer();
-				pursuer.maxSpeed = 2;
-
-				const combatPattern = new FocusCombatPattern();
-				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
-				combatPattern.destructibleProjectiles = 1;
-				pursuer.setCombatPattern( combatPattern );
-				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
-
-				return pursuer;
-
-			}
-
-			// pursuers behind obstacles
-
-			let pursuer = createPursuer();
-			pursuer.position.set( 0, 0.5, 11 );
-			this.addPursuer( pursuer );
-
-			pursuer = createPursuer();
-			pursuer.position.set( - 10, 0.5, 1 );
-			this.addPursuer( pursuer );
-
-			pursuer = createPursuer();
-			pursuer.position.set( 10, 0.5, 1 );
-			this.addPursuer( pursuer );
-
-			// pursuers in front of guard
-
-			const pursuerCount = 6;
-
-			for ( let i = 0; i < pursuerCount; i ++ ) {
-
-				pursuer = createPursuer();
-
-				const x = - 3 + ( i % 3 ) * 3;
-				const z = - 3 + Math.floor( i / 3 ) * 3;
-
-				pursuer.position.set( x, 0.5, z );
-				this.addPursuer( pursuer );
-
-			}
-
-			// obstacles
-
-			// bottom row
-
-			let obstacle = new Obstacle();
-			obstacle.position.set( 0, 0.5, 9 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( - 1.25, 0.5, 9 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( 1.25, 0.5, 9 );
-			this.addObstacle( obstacle );
-
-			// left row
-
-			obstacle = new Obstacle();
-			obstacle.position.set( - 8, 0.5, - 1.25 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( - 8, 0.5, 0 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( - 8, 0.5, 1.25 );
-			this.addObstacle( obstacle );
-
-			// right row
-
-			obstacle = new Obstacle();
-			obstacle.position.set( 8, 0.5, - 1.25 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( 8, 0.5, 0 );
-			this.addObstacle( obstacle );
-
-			obstacle = new Obstacle();
-			obstacle.position.set( 8, 0.5, 1.25 );
-			this.addObstacle( obstacle );
-
-		}
-
 		_createGuard() {
 
 			const guard = new Guard( this );
@@ -66243,56 +66335,7 @@
 
 			this._updateMenu( id );
 
-			switch ( id ) {
-
-				case 1:
-					this._loadStage01();
-					break;
-
-				case 2:
-					this._loadStage02();
-					break;
-
-				case 3:
-					this._loadStage03();
-					break;
-
-				case 4:
-					this._loadStage04();
-					break;
-
-				case 5:
-					this._loadStage05();
-					break;
-
-				case 6:
-					this._loadStage06();
-					break;
-
-				case 7:
-					this._loadStage07();
-					break;
-
-				case 8:
-					this._loadStage08();
-					break;
-
-				case 9:
-					this._loadStage09();
-					break;
-
-				case 10:
-					this._loadStage10();
-					break;
-
-				case 11:
-					this._loadStage11();
-					break;
-
-				default:
-					console.error( 'Unknown level ID', id );
-
-			}
+			this.stageManager.load( id );
 
 			this.active = true;
 
