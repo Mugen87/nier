@@ -63055,8 +63055,8 @@
 			coreShieldHit.setRefDistance( refDistance );
 			const coreShieldDestroyed = new PositionalAudio( listener );
 			coreShieldDestroyed.setRefDistance( refDistance );
-			const pursuerExplode = new PositionalAudio( listener );
-			pursuerExplode.setRefDistance( refDistance );
+			const enemyExplode = new PositionalAudio( listener );
+			enemyExplode.setRefDistance( refDistance );
 
 			const buttonClick = new Audio( listener );
 			buttonClick.setVolume( 0.5 );
@@ -63069,7 +63069,7 @@
 			audioLoader.load( './audio/coreExplode.ogg', buffer => coreExplode.setBuffer( buffer ) );
 			audioLoader.load( './audio/coreShieldHit.ogg', buffer => coreShieldHit.setBuffer( buffer ) );
 			audioLoader.load( './audio/coreShieldDestroyed.ogg', buffer => coreShieldDestroyed.setBuffer( buffer ) );
-			audioLoader.load( './audio/pursuerExplode.ogg', buffer => pursuerExplode.setBuffer( buffer ) );
+			audioLoader.load( './audio/enemyExplode.ogg', buffer => enemyExplode.setBuffer( buffer ) );
 			audioLoader.load( './audio/buttonClick.ogg', buffer => buttonClick.setBuffer( buffer ) );
 
 			audios.set( 'playerShot', playerShot );
@@ -63080,7 +63080,7 @@
 			audios.set( 'coreExplode', coreExplode );
 			audios.set( 'coreShieldHit', coreShieldHit );
 			audios.set( 'coreShieldDestroyed', coreShieldDestroyed );
-			audios.set( 'pursuerExplode', pursuerExplode );
+			audios.set( 'enemyExplode', enemyExplode );
 			audios.set( 'buttonClick', buttonClick );
 
 		}
@@ -64326,7 +64326,7 @@
 
 						const world = this.world;
 
-						const audio = this.audios.get( 'pursuerExplode' );
+						const audio = this.audios.get( 'enemyExplode' );
 						world.playAudio( audio );
 
 						world.removePursuer( this );
@@ -64940,6 +64940,10 @@
 					this._loadStage12();
 					break;
 
+				case 13:
+					this._loadStage13();
+					break;
+
 				default:
 					console.error( 'StageManager: Unknown level ID', id );
 
@@ -65542,6 +65546,200 @@
 
 		}
 
+		_loadStage13() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 20, 1, 20 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 7 );
+			world.controls.resetRotation();
+
+			// guard
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 7 );
+			guard.enableProtection();
+
+			const combatPattern = new DefaultCombatPattern();
+			combatPattern.shotsPerSecond = 0.2;
+			combatPattern.destructibleProjectiles = 0.5;
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			const animation = new PropertyAnimation();
+			animation.object = combatPattern;
+			animation.property = 'shotsPerSecond';
+			animation.targetValue = 8;
+			animation.duration = 10;
+			animation.delay = 4;
+
+			world.animationSystem.add( animation );
+
+			world.addGuard( guard );
+
+			// puruser
+
+			function createPursuer() {
+
+				const pursuer = world._createPursuer();
+
+				const combatPattern = new FocusCombatPattern();
+				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+				combatPattern.destructibleProjectiles = 1;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				return pursuer;
+
+			}
+
+			const pursuerCount = 4;
+
+			for ( let i = 0; i < pursuerCount; i ++ ) {
+
+				const pursuer = createPursuer();
+
+				const x = - 6 + ( i % 4 ) * 4;
+				const z = 0;
+
+				pursuer.position.set( x, 0.5, z );
+				world.addPursuer( pursuer );
+
+			}
+
+			let pursuer = createPursuer();
+			pursuer.position.set( 4, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 4, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			// towers
+
+			const tower = world._createTower();
+			tower.position.set( 0, 0.5, 0 );
+			tower.updateBoundingVolumes(); // towers are static
+
+			const towerCombatPattern = new SpreadCombatPattern();
+			towerCombatPattern.projectilesPerShot = 4;
+			towerCombatPattern.enableRotation = false;
+			tower.setCombatPattern( towerCombatPattern );
+
+			world.addTower( tower );
+
+			// obstacles
+
+			let obstacle = new Obstacle();
+			obstacle.position.set( 2.5, 0.5, 2.5 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( - 2.5, 0.5, 2.5 );
+			world.addObstacle( obstacle );
+
+			obstacle = new Obstacle();
+			obstacle.position.set( 0, 0.5, - 2.5 );
+			world.addObstacle( obstacle );
+
+		}
+
+	}
+
+	/**
+	 * @author Mugen87 / https://github.com/Mugen87
+	 */
+
+	class Tower extends GameEntity {
+
+		constructor( world ) {
+
+			super();
+
+			this.world = world;
+
+			this.boundingRadius = 0.5;
+
+			this.MAX_HEALTH_POINTS = 8;
+			this.healthPoints = this.MAX_HEALTH_POINTS;
+
+			this.boundingSphere = new BoundingSphere();
+			this.boundingSphere.radius = this.boundingRadius;
+
+			this.stateMachineCombat = new StateMachine( this );
+
+			this.audios = new Map();
+
+		}
+
+		setCombatPattern( pattern ) {
+
+			this.stateMachineCombat.currentState = pattern;
+			this.stateMachineCombat.currentState.enter( this );
+
+			return this;
+
+		}
+
+		updateBoundingVolumes() {
+
+			this.boundingSphere.center.copy( this.position );
+
+		}
+
+		update() {
+
+			this.stateMachineCombat.update();
+
+			return this;
+
+		}
+
+		handleMessage( telegram ) {
+
+			switch ( telegram.message ) {
+
+				case 'hit':
+
+					const world = this.world;
+
+					this.healthPoints --;
+
+					const audio = this.audios.get( 'enemyHit' );
+					world.playAudio( audio );
+
+					if ( this.healthPoints === 0 ) {
+
+						const audio = this.audios.get( 'enemyExplode' );
+						world.playAudio( audio );
+
+						world.removeTower( this );
+
+						// clear states
+
+						this.stateMachineCombat.currentState.exit( this );
+
+					}
+
+					break;
+
+				default:
+
+					console.error( 'Unknown message type:', telegram.message );
+
+			}
+
+			return true;
+
+		}
+
 	}
 
 	/**
@@ -65561,8 +65759,8 @@
 			this.entityManager = new EntityManager();
 			this.time = new Time();
 
-			this.currentStage = 12;
-			this.maxStage = 12;
+			this.currentStage = 13;
+			this.maxStage = 13;
 
 			this.field = new Vector3$1( 15, 1, 15 );
 			this.fieldMesh = null;
@@ -65592,6 +65790,9 @@
 
 			this.pursuers = [];
 			this.pursuerMesh = null;
+
+			this.towers = [];
+			this.towerMesh = null;
 
 			this.guards = [];
 			this.guardMesh = null;
@@ -65712,6 +65913,25 @@
 
 			this.entityManager.remove( pursuer );
 			this.scene.remove( pursuer._renderComponent );
+
+		}
+
+		addTower( tower ) {
+
+			this.towers.push( tower );
+			this.entityManager.add( tower );
+
+			this.scene.add( tower._renderComponent );
+
+		}
+
+		removeTower( tower ) {
+
+			const index = this.towers.indexOf( tower );
+			this.towers.splice( index, 1 );
+
+			this.entityManager.remove( tower );
+			this.scene.remove( tower._renderComponent );
 
 		}
 
@@ -65908,6 +66128,15 @@
 			this.pursuerMesh.matrixAutoUpdate = false;
 			this.pursuerMesh.castShadow = true;
 
+			// tower enemy
+
+			const towerGeometry = new CylinderBufferGeometry( 0.5, 0.5, 1, 16 );
+			const towerMaterial = new MeshLambertMaterial( { color: 0x333132 } );
+
+			this.towerMesh = new Mesh( towerGeometry, towerMaterial );
+			this.towerMesh.matrixAutoUpdate = false;
+			this.towerMesh.castShadow = true;
+
 			// guard enemy
 
 			const guardGeometry = new SphereBufferGeometry( 0.5, 16, 16 );
@@ -66081,15 +66310,37 @@
 			pursuer.setRenderComponent( pursuerMesh, sync );
 
 			const enemyShot = this.assetManager.cloneAudio( 'enemyShot' );
-			const pursuerExplode = this.assetManager.cloneAudio( 'pursuerExplode' );
+			const enemyExplode = this.assetManager.cloneAudio( 'enemyExplode' );
 
 			pursuer.audios.set( 'enemyShot', enemyShot );
-			pursuer.audios.set( 'pursuerExplode', pursuerExplode );
+			pursuer.audios.set( 'enemyExplode', enemyExplode );
 
 			pursuerMesh.add( enemyShot );
-			pursuerMesh.add( pursuerExplode );
+			pursuerMesh.add( enemyExplode );
 
 			return pursuer;
+
+		}
+
+		_createTower() {
+
+			const tower = new Tower( this );
+			const towerMesh = this.towerMesh.clone();
+			tower.setRenderComponent( towerMesh, sync );
+
+			const enemyShot = this.assetManager.cloneAudio( 'enemyShot' );
+			const enemyExplode = this.assetManager.cloneAudio( 'enemyExplode' );
+			const enemyHit = this.assetManager.cloneAudio( 'enemyHit' );
+
+			tower.audios.set( 'enemyShot', enemyShot );
+			tower.audios.set( 'enemyExplode', enemyExplode );
+			tower.audios.set( 'enemyHit', enemyHit );
+
+			towerMesh.add( enemyShot );
+			towerMesh.add( enemyExplode );
+			towerMesh.add( enemyHit );
+
+			return tower;
 
 		}
 
@@ -66098,6 +66349,7 @@
 			const player = this.player;
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const towers = this.towers;
 
 			// perform intersection test with guards
 
@@ -66138,6 +66390,33 @@
 				if ( squaredDistance <= ( range * range ) ) {
 
 					if ( player.obb.intersectsBoundingSphere( pursuer.boundingSphere ) === true ) {
+
+						// dead
+
+						player.healthPoints = 0;
+
+						const audio = player.audios.get( 'playerExplode' );
+						this.playAudio( audio );
+						return;
+
+					}
+
+				}
+
+			}
+
+			// perform intersection test with towers
+
+			for ( let i = 0, l = towers.length; i < l; i ++ ) {
+
+				const tower = towers[ i ];
+
+				const squaredDistance = player.position.squaredDistanceTo( tower.position );
+				const range = player.boundingRadius + tower.boundingRadius;
+
+				if ( squaredDistance <= ( range * range ) ) {
+
+					if ( player.obb.intersectsBoundingSphere( tower.boundingSphere ) === true ) {
 
 						// dead
 
@@ -66274,6 +66553,7 @@
 
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const towers = this.towers;
 			const obstacles = this.obstacles;
 
 			// enemies
@@ -66305,7 +66585,7 @@
 
 			}
 
-			// pursuer
+			// pursuers
 
 			for ( let i = 0, l = pursuers.length; i < l; i ++ ) {
 
@@ -66323,6 +66603,33 @@
 					if ( playerProjectile.obb.intersectsBoundingSphere( pursuer.boundingSphere ) === true ) {
 
 						playerProjectile.sendMessage( pursuer, 'hit' );
+						this.removeProjectile( playerProjectile );
+						return;
+
+					}
+
+				}
+
+			}
+
+			// towers
+
+			for ( let i = 0, l = towers.length; i < l; i ++ ) {
+
+				// first test (find out how close objects are)
+
+				const tower = towers[ i ];
+
+				const squaredDistance = playerProjectile.position.squaredDistanceTo( tower.position );
+				const range = playerProjectile.boundingRadius + tower.boundingRadius;
+
+				if ( squaredDistance <= ( range * range ) ) {
+
+					// second more expensive test (only performed if objects are close enough)
+
+					if ( playerProjectile.obb.intersectsBoundingSphere( tower.boundingSphere ) === true ) {
+
+						playerProjectile.sendMessage( tower, 'hit' );
 						this.removeProjectile( playerProjectile );
 						return;
 
@@ -66365,6 +66672,7 @@
 			const player = this.player;
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const towers = this.towers;
 
 			if ( player.healthPoints === 0 ) {
 
@@ -66377,7 +66685,7 @@
 
 				// check guard protection
 
-				if ( this.guardsProtected === true && pursuers.length === 0 ) {
+				if ( this.guardsProtected === true && ( pursuers.length === 0 && towers.length === 0 ) ) {
 
 					// disable protection when all pursuers are destroyed
 
@@ -66471,6 +66779,7 @@
 
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const towers = this.towers;
 			const obstacles = this.obstacles;
 			const enemyProjectiles = this.enemyProjectiles;
 			const enemyDestructibleProjectiles = this.enemyDestructibleProjectiles;
@@ -66487,6 +66796,12 @@
 			for ( let i = ( pursuers.length - 1 ); i >= 0; i -- ) {
 
 				this.removePursuer( pursuers[ i ] );
+
+			}
+
+			for ( let i = ( towers.length - 1 ); i >= 0; i -- ) {
+
+				this.removeTower( towers[ i ] );
 
 			}
 
@@ -66603,6 +66918,7 @@
 
 			const guards = this.guards;
 			const pursuers = this.pursuers;
+			const towers = this.towers;
 			const obstacles = this.obstacles;
 
 			// guards
@@ -66627,6 +66943,12 @@
 				for ( let j = 0, jl = pursuers.length; j < jl; j ++ ) {
 
 					this._checkOverlappingEntites( guard, pursuers[ j ] );
+
+				}
+
+				for ( let j = 0, jl = towers.length; j < jl; j ++ ) {
+
+					this._checkOverlappingEntites( guard, towers[ j ] );
 
 				}
 
@@ -66661,6 +66983,12 @@
 						this._checkOverlappingEntites( pursuer, entity );
 
 					}
+
+				}
+
+				for ( let j = 0, jl = towers.length; j < jl; j ++ ) {
+
+					this._checkOverlappingEntites( pursuer, towers[ j ] );
 
 				}
 

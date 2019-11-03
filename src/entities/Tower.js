@@ -2,27 +2,24 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { BoundingSphere, Vehicle, StateMachine } from 'yuka';
+import { BoundingSphere, GameEntity, StateMachine } from 'yuka';
 
-class Pursuer extends Vehicle {
+class Tower extends GameEntity {
 
 	constructor( world ) {
 
 		super();
 
-		this.maxSpeed = 2;
-
 		this.world = world;
 
 		this.boundingRadius = 0.5;
 
-		this.MAX_HEALTH_POINTS = 1;
+		this.MAX_HEALTH_POINTS = 8;
 		this.healthPoints = this.MAX_HEALTH_POINTS;
 
 		this.boundingSphere = new BoundingSphere();
 		this.boundingSphere.radius = this.boundingRadius;
 
-		this.stateMachineMovement = new StateMachine( this );
 		this.stateMachineCombat = new StateMachine( this );
 
 		this.audios = new Map();
@@ -38,23 +35,15 @@ class Pursuer extends Vehicle {
 
 	}
 
-	setMovementPattern( pattern ) {
-
-		this.stateMachineMovement.currentState = pattern;
-		this.stateMachineMovement.currentState.enter( this );
-
-		return this;
-
-	}
-
-	update( delta ) {
+	updateBoundingVolumes() {
 
 		this.boundingSphere.center.copy( this.position );
 
-		this.stateMachineMovement.update();
-		this.stateMachineCombat.update();
+	}
 
-		super.update( delta );
+	update() {
+
+		this.stateMachineCombat.update();
 
 		return this;
 
@@ -66,21 +55,23 @@ class Pursuer extends Vehicle {
 
 			case 'hit':
 
+				const world = this.world;
+
 				this.healthPoints --;
 
-				if ( this.healthPoints === 0 ) {
+				const audio = this.audios.get( 'enemyHit' );
+				world.playAudio( audio );
 
-					const world = this.world;
+				if ( this.healthPoints === 0 ) {
 
 					const audio = this.audios.get( 'enemyExplode' );
 					world.playAudio( audio );
 
-					world.removePursuer( this );
+					world.removeTower( this );
 
 					// clear states
 
 					this.stateMachineCombat.currentState.exit( this );
-					this.stateMachineMovement.currentState.exit( this );
 
 				}
 
@@ -98,4 +89,4 @@ class Pursuer extends Vehicle {
 
 }
 
-export { Pursuer };
+export { Tower };

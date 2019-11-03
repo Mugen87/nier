@@ -15,6 +15,7 @@ import { ProtectionShader, HitShader } from '../etc/Shaders.js';
 import { PursuerGeometry } from '../etc/PursuerGeometry.js';
 import { AnimationSystem } from './AnimationSystem.js';
 import { StageManager } from './StageManager.js';
+import { Tower } from '../entities/Tower.js';
 
 const toVector = new YUKA.Vector3();
 const displacement = new YUKA.Vector3();
@@ -29,8 +30,8 @@ class World {
 		this.entityManager = new YUKA.EntityManager();
 		this.time = new YUKA.Time();
 
-		this.currentStage = 12;
-		this.maxStage = 12;
+		this.currentStage = 13;
+		this.maxStage = 13;
 
 		this.field = new YUKA.Vector3( 15, 1, 15 );
 		this.fieldMesh = null;
@@ -60,6 +61,9 @@ class World {
 
 		this.pursuers = [];
 		this.pursuerMesh = null;
+
+		this.towers = [];
+		this.towerMesh = null;
 
 		this.guards = [];
 		this.guardMesh = null;
@@ -180,6 +184,25 @@ class World {
 
 		this.entityManager.remove( pursuer );
 		this.scene.remove( pursuer._renderComponent );
+
+	}
+
+	addTower( tower ) {
+
+		this.towers.push( tower );
+		this.entityManager.add( tower );
+
+		this.scene.add( tower._renderComponent );
+
+	}
+
+	removeTower( tower ) {
+
+		const index = this.towers.indexOf( tower );
+		this.towers.splice( index, 1 );
+
+		this.entityManager.remove( tower );
+		this.scene.remove( tower._renderComponent );
 
 	}
 
@@ -376,6 +399,15 @@ class World {
 		this.pursuerMesh.matrixAutoUpdate = false;
 		this.pursuerMesh.castShadow = true;
 
+		// tower enemy
+
+		const towerGeometry = new THREE.CylinderBufferGeometry( 0.5, 0.5, 1, 16 );
+		const towerMaterial = new THREE.MeshLambertMaterial( { color: 0x333132 } );
+
+		this.towerMesh = new THREE.Mesh( towerGeometry, towerMaterial );
+		this.towerMesh.matrixAutoUpdate = false;
+		this.towerMesh.castShadow = true;
+
 		// guard enemy
 
 		const guardGeometry = new THREE.SphereBufferGeometry( 0.5, 16, 16 );
@@ -549,15 +581,37 @@ class World {
 		pursuer.setRenderComponent( pursuerMesh, sync );
 
 		const enemyShot = this.assetManager.cloneAudio( 'enemyShot' );
-		const pursuerExplode = this.assetManager.cloneAudio( 'pursuerExplode' );
+		const enemyExplode = this.assetManager.cloneAudio( 'enemyExplode' );
 
 		pursuer.audios.set( 'enemyShot', enemyShot );
-		pursuer.audios.set( 'pursuerExplode', pursuerExplode );
+		pursuer.audios.set( 'enemyExplode', enemyExplode );
 
 		pursuerMesh.add( enemyShot );
-		pursuerMesh.add( pursuerExplode );
+		pursuerMesh.add( enemyExplode );
 
 		return pursuer;
+
+	}
+
+	_createTower() {
+
+		const tower = new Tower( this );
+		const towerMesh = this.towerMesh.clone();
+		tower.setRenderComponent( towerMesh, sync );
+
+		const enemyShot = this.assetManager.cloneAudio( 'enemyShot' );
+		const enemyExplode = this.assetManager.cloneAudio( 'enemyExplode' );
+		const enemyHit = this.assetManager.cloneAudio( 'enemyHit' );
+
+		tower.audios.set( 'enemyShot', enemyShot );
+		tower.audios.set( 'enemyExplode', enemyExplode );
+		tower.audios.set( 'enemyHit', enemyHit );
+
+		towerMesh.add( enemyShot );
+		towerMesh.add( enemyExplode );
+		towerMesh.add( enemyHit );
+
+		return tower;
 
 	}
 
@@ -566,6 +620,7 @@ class World {
 		const player = this.player;
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const towers = this.towers;
 
 		// perform intersection test with guards
 
@@ -606,6 +661,33 @@ class World {
 			if ( squaredDistance <= ( range * range ) ) {
 
 				if ( player.obb.intersectsBoundingSphere( pursuer.boundingSphere ) === true ) {
+
+					// dead
+
+					player.healthPoints = 0;
+
+					const audio = player.audios.get( 'playerExplode' );
+					this.playAudio( audio );
+					return;
+
+				}
+
+			}
+
+		}
+
+		// perform intersection test with towers
+
+		for ( let i = 0, l = towers.length; i < l; i ++ ) {
+
+			const tower = towers[ i ];
+
+			const squaredDistance = player.position.squaredDistanceTo( tower.position );
+			const range = player.boundingRadius + tower.boundingRadius;
+
+			if ( squaredDistance <= ( range * range ) ) {
+
+				if ( player.obb.intersectsBoundingSphere( tower.boundingSphere ) === true ) {
 
 					// dead
 
@@ -742,6 +824,7 @@ class World {
 
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const towers = this.towers;
 		const obstacles = this.obstacles;
 
 		// enemies
@@ -773,7 +856,7 @@ class World {
 
 		}
 
-		// pursuer
+		// pursuers
 
 		for ( let i = 0, l = pursuers.length; i < l; i ++ ) {
 
@@ -791,6 +874,33 @@ class World {
 				if ( playerProjectile.obb.intersectsBoundingSphere( pursuer.boundingSphere ) === true ) {
 
 					playerProjectile.sendMessage( pursuer, 'hit' );
+					this.removeProjectile( playerProjectile );
+					return;
+
+				}
+
+			}
+
+		}
+
+		// towers
+
+		for ( let i = 0, l = towers.length; i < l; i ++ ) {
+
+			// first test (find out how close objects are)
+
+			const tower = towers[ i ];
+
+			const squaredDistance = playerProjectile.position.squaredDistanceTo( tower.position );
+			const range = playerProjectile.boundingRadius + tower.boundingRadius;
+
+			if ( squaredDistance <= ( range * range ) ) {
+
+				// second more expensive test (only performed if objects are close enough)
+
+				if ( playerProjectile.obb.intersectsBoundingSphere( tower.boundingSphere ) === true ) {
+
+					playerProjectile.sendMessage( tower, 'hit' );
 					this.removeProjectile( playerProjectile );
 					return;
 
@@ -833,6 +943,7 @@ class World {
 		const player = this.player;
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const towers = this.towers;
 
 		if ( player.healthPoints === 0 ) {
 
@@ -845,7 +956,7 @@ class World {
 
 			// check guard protection
 
-			if ( this.guardsProtected === true && pursuers.length === 0 ) {
+			if ( this.guardsProtected === true && ( pursuers.length === 0 && towers.length === 0 ) ) {
 
 				// disable protection when all pursuers are destroyed
 
@@ -939,6 +1050,7 @@ class World {
 
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const towers = this.towers;
 		const obstacles = this.obstacles;
 		const enemyProjectiles = this.enemyProjectiles;
 		const enemyDestructibleProjectiles = this.enemyDestructibleProjectiles;
@@ -955,6 +1067,12 @@ class World {
 		for ( let i = ( pursuers.length - 1 ); i >= 0; i -- ) {
 
 			this.removePursuer( pursuers[ i ] );
+
+		}
+
+		for ( let i = ( towers.length - 1 ); i >= 0; i -- ) {
+
+			this.removeTower( towers[ i ] );
 
 		}
 
@@ -1071,6 +1189,7 @@ class World {
 
 		const guards = this.guards;
 		const pursuers = this.pursuers;
+		const towers = this.towers;
 		const obstacles = this.obstacles;
 
 		// guards
@@ -1095,6 +1214,12 @@ class World {
 			for ( let j = 0, jl = pursuers.length; j < jl; j ++ ) {
 
 				this._checkOverlappingEntites( guard, pursuers[ j ] );
+
+			}
+
+			for ( let j = 0, jl = towers.length; j < jl; j ++ ) {
+
+				this._checkOverlappingEntites( guard, towers[ j ] );
 
 			}
 
@@ -1129,6 +1254,12 @@ class World {
 					this._checkOverlappingEntites( pursuer, entity );
 
 				}
+
+			}
+
+			for ( let j = 0, jl = towers.length; j < jl; j ++ ) {
+
+				this._checkOverlappingEntites( pursuer, towers[ j ] );
 
 			}
 

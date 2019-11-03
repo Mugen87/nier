@@ -78,8 +78,8 @@ class AssetManager {
 		coreShieldHit.setRefDistance( refDistance );
 		const coreShieldDestroyed = new THREE.PositionalAudio( listener );
 		coreShieldDestroyed.setRefDistance( refDistance );
-		const pursuerExplode = new THREE.PositionalAudio( listener );
-		pursuerExplode.setRefDistance( refDistance );
+		const enemyExplode = new THREE.PositionalAudio( listener );
+		enemyExplode.setRefDistance( refDistance );
 
 		const buttonClick = new THREE.Audio( listener );
 		buttonClick.setVolume( 0.5 );
@@ -92,7 +92,7 @@ class AssetManager {
 		audioLoader.load( './audio/coreExplode.ogg', buffer => coreExplode.setBuffer( buffer ) );
 		audioLoader.load( './audio/coreShieldHit.ogg', buffer => coreShieldHit.setBuffer( buffer ) );
 		audioLoader.load( './audio/coreShieldDestroyed.ogg', buffer => coreShieldDestroyed.setBuffer( buffer ) );
-		audioLoader.load( './audio/pursuerExplode.ogg', buffer => pursuerExplode.setBuffer( buffer ) );
+		audioLoader.load( './audio/enemyExplode.ogg', buffer => enemyExplode.setBuffer( buffer ) );
 		audioLoader.load( './audio/buttonClick.ogg', buffer => buttonClick.setBuffer( buffer ) );
 
 		audios.set( 'playerShot', playerShot );
@@ -103,7 +103,7 @@ class AssetManager {
 		audios.set( 'coreExplode', coreExplode );
 		audios.set( 'coreShieldHit', coreShieldHit );
 		audios.set( 'coreShieldDestroyed', coreShieldDestroyed );
-		audios.set( 'pursuerExplode', pursuerExplode );
+		audios.set( 'enemyExplode', enemyExplode );
 		audios.set( 'buttonClick', buttonClick );
 
 	}
