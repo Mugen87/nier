@@ -10,6 +10,8 @@ class Pursuer extends Vehicle {
 
 		super();
 
+		this.maxSpeed = 2;
+
 		this.world = world;
 
 		this.boundingRadius = 0.5;

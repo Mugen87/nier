@@ -63,6 +63,10 @@ class StageManager {
 				this._loadStage11();
 				break;
 
+			case 12:
+				this._loadStage12();
+				break;
+
 			default:
 				console.error( 'StageManager: Unknown level ID', id );
 
@@ -253,7 +257,6 @@ class StageManager {
 		for ( let i = 0; i < pursuerCount; i ++ ) {
 
 			const pursuer = world._createPursuer();
-			pursuer.maxSpeed = 2;
 
 			const s = Math.PI * ( i / pursuerCount );
 			const x = Math.cos( s ) * 4;
@@ -306,7 +309,6 @@ class StageManager {
 		for ( let i = 0; i < pursuerCount; i ++ ) {
 
 			const pursuer = world._createPursuer();
-			pursuer.maxSpeed = 2;
 
 			const s = Math.PI * ( i / pursuerCount );
 			const x = Math.cos( s ) * 4;
@@ -419,7 +421,6 @@ class StageManager {
 		for ( let i = 0; i < pursuerCount; i ++ ) {
 
 			const pursuer = world._createPursuer();
-			pursuer.maxSpeed = 2;
 
 			const x = - 5 + ( i % 4 ) * 3;
 			const z = - 4 + Math.floor( i / 4 ) * 3;
@@ -483,7 +484,6 @@ class StageManager {
 		function createPursuer() {
 
 			const pursuer = world._createPursuer();
-			pursuer.maxSpeed = 2;
 
 			const combatPattern = new FocusCombatPattern();
 			combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
@@ -567,6 +567,104 @@ class StageManager {
 
 		obstacle = new Obstacle();
 		obstacle.position.set( 8, 0.5, 1.25 );
+		world.addObstacle( obstacle );
+
+	}
+
+	_loadStage12() {
+
+		const world = this.world;
+
+		world.guardsProtected = true;
+
+		// field
+
+		world.updateField( 20, 1, 20 );
+
+		// controls
+
+		world.controls.setPosition( 0, 0.5, 5 );
+		world.controls.resetRotation();
+
+		// guard
+
+		const guard = world._createGuard();
+		guard.position.set( 0, 0.5, - 5 );
+		guard.enableProtection();
+
+		const combatPattern = new FocusCombatPattern();
+		combatPattern.pauseDuration = 4;
+		combatPattern.destructibleProjectiles = 0.5;
+		guard.setCombatPattern( combatPattern );
+		guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+		const animation = new PropertyAnimation();
+		animation.object = combatPattern;
+		animation.property = 'pauseDuration';
+		animation.targetValue = 0;
+		animation.duration = 6;
+		animation.delay = 2;
+
+		world.animationSystem.add( animation );
+
+		world.addGuard( guard );
+
+		// puruser
+
+		const pursuerCount = 8;
+
+		for ( let i = 0; i < pursuerCount; i ++ ) {
+
+			const pursuer = world._createPursuer();
+
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+			combatPattern.destructibleProjectiles = 1;
+			pursuer.setCombatPattern( combatPattern );
+			pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			const x = - 8 + ( i % 4 ) * 5;
+			const z = - 8 + Math.floor( i / 4 ) * 5;
+
+			pursuer.position.set( x, 0.5, z );
+			world.addPursuer( pursuer );
+
+		}
+
+		// obstacles
+
+		// top row
+
+		let obstacle = new Obstacle();
+		obstacle.position.set( 0, 0.5, - 6 );
+		world.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 5, 0.5, - 6 );
+		world.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 5, 0.5, - 6 );
+		world.addObstacle( obstacle );
+
+		// left row
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 5, 0.5, - 1 );
+		world.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( - 5, 0.5, 4 );
+		world.addObstacle( obstacle );
+
+		// right row
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 5, 0.5, - 1 );
+		world.addObstacle( obstacle );
+
+		obstacle = new Obstacle();
+		obstacle.position.set( 5, 0.5, 4 );
 		world.addObstacle( obstacle );
 
 	}

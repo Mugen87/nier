@@ -30,8 +30,8 @@ class World {
 		this.entityManager = new YUKA.EntityManager();
 		this.time = new YUKA.Time();
 
-		this.currentStage = 11;
-		this.maxStage = 11;
+		this.currentStage = 12;
+		this.maxStage = 12;
 
 		this.field = new YUKA.Vector3( 15, 1, 15 );
 		this.fieldMesh = null;
