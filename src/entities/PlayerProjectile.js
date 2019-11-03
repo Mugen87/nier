@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { OBB, Vector3 } from '../lib/yuka.module.js';
+import { OBB, Vector3 } from 'yuka';
 import { Projectile } from './Projectile.js';
 
 const target = new Vector3();

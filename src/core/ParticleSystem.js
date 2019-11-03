@@ -3,8 +3,8 @@
  */
 
 import * as THREE from 'three';
+import { Vector3 } from 'yuka';
 
-import { Vector3 } from '../lib/yuka.module.js';
 import { ParticleShader } from '../etc/Shaders.js';
 
 class ParticleSystem {

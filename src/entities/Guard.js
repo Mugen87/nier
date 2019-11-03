@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { BoundingSphere, Vehicle, StateMachine, Quaternion } from '../lib/yuka.module.js';
+import { BoundingSphere, Vehicle, StateMachine, Quaternion } from 'yuka';
 
 const q = new Quaternion();
 

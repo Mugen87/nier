@@ -3,8 +3,7 @@
  */
 
 import * as THREE from 'three';
-
-import * as YUKA from '../lib/yuka.module.js';
+import * as YUKA from 'yuka';
 
 import { AssetManager } from './AssetManager.js';
 import { VehicleControls } from './VehicleControls.js';

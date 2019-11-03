@@ -3,7 +3,7 @@
  */
 
 
-import { State, Vector3 } from '../lib/yuka.module.js';
+import { State, Vector3 } from 'yuka';
 import { EnemyProjectile } from '../entities/EnemyProjectile.js';
 
 const direction = new Vector3();

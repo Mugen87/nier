@@ -2,7 +2,7 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { MovingEntity } from '../lib/yuka.module.js';
+import { MovingEntity } from 'yuka';
 
 class Projectile extends MovingEntity {
 
