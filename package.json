@@ -13,10 +13,6 @@
   "eslintConfig": {
     "extends": "mdcs"
   },
-  "eslintIgnore": [
-    "yuka.module.js",
-    "three.module.js"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Mugen87/nier.git"
