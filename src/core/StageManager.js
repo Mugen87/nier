@@ -2,7 +2,8 @@
  * @author Mugen87 / https://github.com/Mugen87
  */
 
-import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern } from '../patterns/CombatPatterns';
+import { Vector3 } from 'yuka';
+import { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern, RandomCombatPattern } from '../patterns/CombatPatterns';
 import { LeftRightMovementPattern, WavyMovementPattern, CircleMovementPattern, PursuitBehaviorMovementPattern } from '../patterns/MovementPatterns';
 import { Obstacle } from '../entities/Obstacle';
 import { PropertyAnimation } from './AnimationSystem';
@@ -69,6 +70,10 @@ class StageManager {
 
 			case 13:
 				this._loadStage13();
+				break;
+
+			case 14:
+				this._loadStage14();
 				break;
 
 			default:
@@ -775,6 +780,139 @@ class StageManager {
 		obstacle = new Obstacle();
 		obstacle.position.set( 0, 0.5, - 2.5 );
 		world.addObstacle( obstacle );
+
+	}
+
+	_loadStage14() {
+
+		const world = this.world;
+
+		world.guardsProtected = true;
+
+		// field
+
+		world.updateField( 20, 1, 20 );
+
+		// controls
+
+		world.controls.setPosition( 0, 0.5, 7 );
+		world.controls.resetRotation();
+
+		const guard = world._createGuard();
+		guard.position.set( 0, 0.5, - 7 );
+		guard.enableProtection();
+
+		const combatPattern = new RandomCombatPattern();
+		combatPattern.shotsPerSecond = 0.5;
+		combatPattern.destructibleProjectiles = 0.5;
+
+		guard.setCombatPattern( combatPattern );
+		guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+		const animation = new PropertyAnimation();
+		animation.object = combatPattern;
+		animation.property = 'shotsPerSecond';
+		animation.targetValue = 8;
+		animation.duration = 6;
+		animation.delay = 0;
+
+		world.animationSystem.add( animation );
+
+		world.addGuard( guard );
+
+		// purusers
+
+		function createPursuer() {
+
+			const pursuer = world._createPursuer();
+
+			const combatPattern = new FocusCombatPattern();
+			combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+			combatPattern.destructibleProjectiles = 1;
+			pursuer.setCombatPattern( combatPattern );
+			pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			return pursuer;
+
+		}
+
+		let pursuer = createPursuer();
+		pursuer.position.set( 4, 0.5, 0 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( - 4, 0.5, 0 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( - 7, 0.5, - 4 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( 7, 0.5, - 4 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( - 1, 0.5, - 4 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( 1, 0.5, - 4 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( 4, 0.5, - 7 );
+		world.addPursuer( pursuer );
+
+		pursuer = createPursuer();
+		pursuer.position.set( - 4, 0.5, - 7 );
+		world.addPursuer( pursuer );
+
+
+		// obstacles
+
+		function generateBlock( position ) {
+
+			const obstalceCount = 9;
+
+			for ( let i = 0; i < obstalceCount; i ++ ) {
+
+				const obstacle = new Obstacle();
+
+				let x = 1.25 - ( i % 3 ) * 1.25;
+				let z = 1.25 - Math.floor( i / 3 ) * 1.25;
+
+				x += position.x;
+				z += position.z;
+
+				obstacle.position.set( x, 0.5, z );
+				world.addObstacle( obstacle );
+
+			}
+
+		}
+
+		const position = new Vector3();
+
+		// bottom right
+
+		position.set( 4, 0, 4 );
+		generateBlock( position );
+
+		// bottom left
+
+		position.set( - 4, 0, 4 );
+		generateBlock( position );
+
+		// top right
+
+		position.set( 4, 0, - 4 );
+		generateBlock( position );
+
+		// top left
+
+		position.set( - 4, 0, - 4 );
+		generateBlock( position );
 
 	}
 

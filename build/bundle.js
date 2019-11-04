@@ -64572,6 +64572,8 @@
 	const direction$3 = new Vector3$1();
 	const target$5 = new Vector3$1();
 
+	const TWO_PI = Math.PI * 2;
+
 	class CombatPattern extends State {
 
 		constructor() {
@@ -64667,7 +64669,7 @@
 
 				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
 
-					let s = ( 2 * Math.PI * ( i / this.projectilesPerShot ) );
+					let s = ( TWO_PI * ( i / this.projectilesPerShot ) );
 
 					if ( this.enableRotation ) s += elapsedTime * this.rotationSpeed;
 
@@ -64745,6 +64747,54 @@
 				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
 
 				world.addProjectile( projectile );
+
+				const audio = enemy.audios.get( 'enemyShot' );
+				world.playAudio( audio );
+
+			}
+
+		}
+
+	}
+
+	class RandomCombatPattern extends CombatPattern {
+
+		constructor() {
+
+			super();
+
+			this.shotsPerSecond = 1;
+			this.projectilesPerShot = 6;
+
+		}
+
+		execute( enemy ) {
+
+			const world = enemy.world;
+			const elapsedTime = world.time.getElapsed();
+
+			if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
+
+				this._lastShotTime = elapsedTime;
+
+				for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
+
+					let s = TWO_PI * Math.random();
+
+					target$5.copy( enemy.position );
+					target$5.x += Math.sin( s );
+					target$5.z += Math.cos( s );
+
+					direction$3.subVectors( target$5, enemy.position ).normalize();
+					direction$3.applyRotation( enemy.rotation );
+
+					const projectile = new EnemyProjectile( enemy, direction$3 );
+
+					if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
+
+					world.addProjectile( projectile );
+
+				}
 
 				const audio = enemy.audios.get( 'enemyShot' );
 				world.playAudio( audio );
@@ -64942,6 +64992,10 @@
 
 				case 13:
 					this._loadStage13();
+					break;
+
+				case 14:
+					this._loadStage14();
 					break;
 
 				default:
@@ -65651,6 +65705,139 @@
 
 		}
 
+		_loadStage14() {
+
+			const world = this.world;
+
+			world.guardsProtected = true;
+
+			// field
+
+			world.updateField( 20, 1, 20 );
+
+			// controls
+
+			world.controls.setPosition( 0, 0.5, 7 );
+			world.controls.resetRotation();
+
+			const guard = world._createGuard();
+			guard.position.set( 0, 0.5, - 7 );
+			guard.enableProtection();
+
+			const combatPattern = new RandomCombatPattern();
+			combatPattern.shotsPerSecond = 0.5;
+			combatPattern.destructibleProjectiles = 0.5;
+
+			guard.setCombatPattern( combatPattern );
+			guard.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+			const animation = new PropertyAnimation();
+			animation.object = combatPattern;
+			animation.property = 'shotsPerSecond';
+			animation.targetValue = 8;
+			animation.duration = 6;
+			animation.delay = 0;
+
+			world.animationSystem.add( animation );
+
+			world.addGuard( guard );
+
+			// purusers
+
+			function createPursuer() {
+
+				const pursuer = world._createPursuer();
+
+				const combatPattern = new FocusCombatPattern();
+				combatPattern.shotsPerSecond = 0.25 + Math.random() * 0.75;
+				combatPattern.destructibleProjectiles = 1;
+				pursuer.setCombatPattern( combatPattern );
+				pursuer.setMovementPattern( new PursuitBehaviorMovementPattern() );
+
+				return pursuer;
+
+			}
+
+			let pursuer = createPursuer();
+			pursuer.position.set( 4, 0.5, 0 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 4, 0.5, 0 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 7, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( 7, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 1, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( 1, 0.5, - 4 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( 4, 0.5, - 7 );
+			world.addPursuer( pursuer );
+
+			pursuer = createPursuer();
+			pursuer.position.set( - 4, 0.5, - 7 );
+			world.addPursuer( pursuer );
+
+
+			// obstacles
+
+			function generateBlock( position ) {
+
+				const obstalceCount = 9;
+
+				for ( let i = 0; i < obstalceCount; i ++ ) {
+
+					const obstacle = new Obstacle();
+
+					let x = 1.25 - ( i % 3 ) * 1.25;
+					let z = 1.25 - Math.floor( i / 3 ) * 1.25;
+
+					x += position.x;
+					z += position.z;
+
+					obstacle.position.set( x, 0.5, z );
+					world.addObstacle( obstacle );
+
+				}
+
+			}
+
+			const position = new Vector3$1();
+
+			// bottom right
+
+			position.set( 4, 0, 4 );
+			generateBlock( position );
+
+			// bottom left
+
+			position.set( - 4, 0, 4 );
+			generateBlock( position );
+
+			// top right
+
+			position.set( 4, 0, - 4 );
+			generateBlock( position );
+
+			// top left
+
+			position.set( - 4, 0, - 4 );
+			generateBlock( position );
+
+		}
+
 	}
 
 	/**
@@ -65759,8 +65946,8 @@
 			this.entityManager = new EntityManager();
 			this.time = new Time();
 
-			this.currentStage = 13;
-			this.maxStage = 13;
+			this.currentStage = 14;
+			this.maxStage = 14;
 
 			this.field = new Vector3$1( 15, 1, 15 );
 			this.fieldMesh = null;
@@ -65786,7 +65973,7 @@
 
 			this.obstacles = [];
 			this.obstacleMesh = null;
-			this.maxObstacles = 10;
+			this.maxObstacles = 50;
 
 			this.pursuers = [];
 			this.pursuerMesh = null;

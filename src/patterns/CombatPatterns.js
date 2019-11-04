@@ -9,6 +9,8 @@ import { EnemyProjectile } from '../entities/EnemyProjectile.js';
 const direction = new Vector3();
 const target = new Vector3();
 
+const TWO_PI = Math.PI * 2;
+
 class CombatPattern extends State {
 
 	constructor() {
@@ -104,7 +106,7 @@ class SpreadCombatPattern extends CombatPattern {
 
 			for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
 
-				let s = ( 2 * Math.PI * ( i / this.projectilesPerShot ) );
+				let s = ( TWO_PI * ( i / this.projectilesPerShot ) );
 
 				if ( this.enableRotation ) s += elapsedTime * this.rotationSpeed;
 
@@ -192,4 +194,52 @@ class FocusCombatPattern extends CombatPattern {
 
 }
 
-export { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern };
+class RandomCombatPattern extends CombatPattern {
+
+	constructor() {
+
+		super();
+
+		this.shotsPerSecond = 1;
+		this.projectilesPerShot = 6;
+
+	}
+
+	execute( enemy ) {
+
+		const world = enemy.world;
+		const elapsedTime = world.time.getElapsed();
+
+		if ( elapsedTime - this._lastShotTime > ( 1 / this.shotsPerSecond ) ) {
+
+			this._lastShotTime = elapsedTime;
+
+			for ( let i = 0; i < this.projectilesPerShot; i ++ ) {
+
+				let s = TWO_PI * Math.random();
+
+				target.copy( enemy.position );
+				target.x += Math.sin( s );
+				target.z += Math.cos( s );
+
+				direction.subVectors( target, enemy.position ).normalize();
+				direction.applyRotation( enemy.rotation );
+
+				const projectile = new EnemyProjectile( enemy, direction );
+
+				if ( Math.random() <= this.destructibleProjectiles ) projectile.isDestructible = true;
+
+				world.addProjectile( projectile );
+
+			}
+
+			const audio = enemy.audios.get( 'enemyShot' );
+			world.playAudio( audio );
+
+		}
+
+	}
+
+}
+
+export { DefaultCombatPattern, SpreadCombatPattern, FocusCombatPattern, RandomCombatPattern };

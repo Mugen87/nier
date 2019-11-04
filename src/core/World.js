@@ -30,8 +30,8 @@ class World {
 		this.entityManager = new YUKA.EntityManager();
 		this.time = new YUKA.Time();
 
-		this.currentStage = 13;
-		this.maxStage = 13;
+		this.currentStage = 14;
+		this.maxStage = 14;
 
 		this.field = new YUKA.Vector3( 15, 1, 15 );
 		this.fieldMesh = null;
@@ -57,7 +57,7 @@ class World {
 
 		this.obstacles = [];
 		this.obstacleMesh = null;
-		this.maxObstacles = 10;
+		this.maxObstacles = 50;
 
 		this.pursuers = [];
 		this.pursuerMesh = null;
