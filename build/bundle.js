@@ -63112,7 +63112,7 @@
 
 			this.cameraOffset = new Vector3$1( 0, 20, 10 );
 			this.cameraMovementSpeed = 2.5;
-			this.rotationSpeed = 0.005;
+			this.rotationSpeed = 5;
 			this.brakingForce = 10;
 
 			this.movementX = 0; // mouse left/right
@@ -63349,8 +63349,11 @@
 
 	function onMouseMove( event ) {
 
-		this.movementX += event.movementX * this.rotationSpeed;
-		this.movementY += event.movementY * this.rotationSpeed;
+		const x = event.movementX / screen.width;
+		const y = event.movementY / screen.height;
+
+		this.movementX += x * this.rotationSpeed;
+		this.movementY += y * this.rotationSpeed;
 
 		this.movementX = MathUtils.clamp( this.movementX, - 1, 1 );
 		this.movementY = MathUtils.clamp( this.movementY, - 1, 1 );
