@@ -65949,7 +65949,7 @@
 			this.entityManager = new EntityManager();
 			this.time = new Time();
 
-			this.currentStage = 14;
+			this.currentStage = 1;
 			this.maxStage = 14;
 
 			this.field = new Vector3$1( 15, 1, 15 );
