@@ -49332,8 +49332,8 @@
 
 			return {
 				type: this.constructor.name,
-				sender: this.sender ? this.sender.uuid : null,
-				receiver: this.receiver ? this.receiver.uuid : null,
+				sender: this.sender.uuid,
+				receiver: this.receiver.uuid,
 				message: this.message,
 				delay: this.delay,
 				data: this.data
@@ -52227,7 +52227,7 @@
 			* @type Boolean
 			* @default true
 			*/
-			this.canAcitivateTrigger = true;
+			this.canActivateTrigger = true;
 
 			/**
 			* A transformation matrix representing the world space of this game entity.
@@ -52566,6 +52566,7 @@
 				up: this.up.toArray( new Array() ),
 				boundingRadius: this.boundingRadius,
 				maxTurnRate: this.maxTurnRate,
+				canActivateTrigger: this.canActivateTrigger,
 				worldMatrix: this.worldMatrix.toArray( new Array() ),
 				_localMatrix: this._localMatrix.toArray( new Array() ),
 				_cache: {
@@ -52598,6 +52599,7 @@
 			this.up.fromArray( json.up );
 			this.boundingRadius = json.boundingRadius;
 			this.maxTurnRate = json.maxTurnRate;
+			this.canActivateTrigger = json.canActivateTrigger;
 			this.worldMatrix.fromArray( json.worldMatrix );
 
 			this.children = json.children.slice();
@@ -56535,6 +56537,18 @@
 		}
 
 		/**
+		* Updates this trigger region. Must be implemented by all concrete trigger regions.
+		*
+		* @param {Trigger} trigger - The trigger that owns this region.
+		* @return {TriggerRegion} A reference to this trigger region.
+		*/
+		update( /* trigger */ ) {
+
+			return this;
+
+		}
+
+		/**
 		* Transforms this instance into a JSON object.
 		*
 		* @return {Object} The JSON object.
@@ -56562,6 +56576,7 @@
 	}
 
 	const boundingSphereEntity = new BoundingSphere();
+	const center$1 = new Vector3$1();
 
 	/**
 	* Class for representing a rectangular trigger region as an AABB.
@@ -56574,53 +56589,15 @@
 		/**
 		* Constructs a new rectangular trigger region with the given values.
 		*
-		* @param {Vector3} min - The minimum bounds of the region.
-		* @param {Vector3} max - The maximum bounds of the region.
+		* @param {Vector3} size - The size of the region.
 		*/
-		constructor( min = new Vector3$1(), max = new Vector3$1() ) {
+		constructor( size = new Vector3$1() ) {
 
 			super();
 
-			this._aabb = new AABB( min, max );
+			this.size = size;
 
-		}
-
-		get min() {
-
-			return this._aabb.min;
-
-		}
-
-		set min( min ) {
-
-			this._aabb.min = min;
-
-		}
-
-		get max() {
-
-			return this._aabb.max;
-
-		}
-
-		set max( max ) {
-
-			this._aabb.max = max;
-
-		}
-
-		/**
-		* Creates the new rectangular trigger region from a given position and size.
-		*
-		* @param {Vector3} position - The center position of the trigger region.
-		* @param {Vector3} size - The size of the trigger region per axis.
-		* @return {RectangularTriggerRegion} A reference to this trigger region.
-		*/
-		fromPositionAndSize( position, size ) {
-
-			this._aabb.fromCenterAndSize( position, size );
-
-			return this;
+			this._aabb = new AABB();
 
 		}
 
@@ -56640,6 +56617,22 @@
 		}
 
 		/**
+		* Updates this trigger region.
+		*
+		* @param {Trigger} trigger - The trigger that owns this region.
+		* @return {RectangularTriggerRegion} A reference to this trigger region.
+		*/
+		update( trigger ) {
+
+			trigger.getWorldPosition( center$1 );
+
+			this._aabb.fromCenterAndSize( center$1, this.size );
+
+			return this;
+
+		}
+
+		/**
 		* Transforms this instance into a JSON object.
 		*
 		* @return {Object} The JSON object.
@@ -56648,7 +56641,7 @@
 
 			const json = super.toJSON();
 
-			json._aabb = this._aabb.toJSON();
+			json.size = this.size.toArray( new Array() );
 
 			return json;
 
@@ -56664,7 +56657,7 @@
 
 			super.fromJSON( json );
 
-			this._aabb.fromJSON( json._aabb );
+			this.size.fromArray( json.size );
 
 			return this;
 
@@ -56683,40 +56676,19 @@
 	class SphericalTriggerRegion extends TriggerRegion {
 
 		/**
-		* Constructs a new spherical trigger region with the given values.
+		* Constructs a new spherical trigger region.
 		*
-		* @param {Vector3} position - The center position of the region.
 		* @param {Number} radius - The radius of the region.
 		*/
-		constructor( position = new Vector3$1(), radius = 0 ) {
+		constructor( radius = 0 ) {
 
 			super();
 
-			this._boundingSphere = new BoundingSphere( position, radius );
+			this.radius = radius;
 
-		}
+			//
 
-		get position() {
-
-			return this._boundingSphere.center;
-
-		}
-
-		set position( position ) {
-
-			this._boundingSphere.center = position;
-
-		}
-
-		get radius() {
-
-			return this._boundingSphere.radius;
-
-		}
-
-		set radius( radius ) {
-
-			this._boundingSphere.radius = radius;
+			this._boundingSphere = new BoundingSphere();
 
 		}
 
@@ -56729,9 +56701,25 @@
 		*/
 		touching( entity ) {
 
-			boundingSphereEntity$1.set( entity.position, entity.boundingRadius );
+			entity.getWorldPosition( boundingSphereEntity$1.center );
+			boundingSphereEntity$1.radius = entity.boundingRadius;
 
 			return this._boundingSphere.intersectsBoundingSphere( boundingSphereEntity$1 );
+
+		}
+
+		/**
+		* Updates this trigger region.
+		*
+		* @param {Trigger} trigger - The trigger that owns this region.
+		* @return {SphericalTriggerRegion} A reference to this trigger region.
+		*/
+		update( trigger ) {
+
+			trigger.getWorldPosition( this._boundingSphere.center );
+			this._boundingSphere.radius = this.radius;
+
+			return this;
 
 		}
 
@@ -56744,7 +56732,7 @@
 
 			const json = super.toJSON();
 
-			json._boundingSphere = this._boundingSphere.toJSON();
+			json.radius = this.radius;
 
 			return json;
 
@@ -56760,7 +56748,7 @@
 
 			super.fromJSON( json );
 
-			this._boundingSphere.fromJSON( json._boundingSphere );
+			this.radius = json.radius;
 
 			return this;
 
@@ -56770,11 +56758,12 @@
 
 	/**
 	* Base class for representing triggers. A trigger generates an action if a game entity
-	* touches its trigger region, a predefine region in 3D space.
+	* touches its trigger region, a predefine area in 3D space.
 	*
 	* @author {@link https://github.com/Mugen87|Mugen87}
+	* @augments GameEntity
 	*/
-	class Trigger {
+	class Trigger extends GameEntity {
 
 		/**
 		* Constructs a new trigger with the given values.
@@ -56783,12 +56772,7 @@
 		*/
 		constructor( region = new TriggerRegion() ) {
 
-			/**
-			* Whether this trigger is active or not.
-			* @type Boolean
-			* @default true
-			*/
-			this.active = true;
+			super();
 
 			/**
 			* The region of the trigger.
@@ -56798,7 +56782,9 @@
 
 			//
 
-			this._typesMap = new Map(); // used for deserialization of custom triggerRegions
+			this.canActivateTrigger = false; // triggers can't activate other triggers by default
+
+			this._typesMap = new Map(); // used for deserialization of custom trigger regions
 
 		}
 
@@ -56811,7 +56797,7 @@
 		*/
 		check( entity ) {
 
-			if ( ( this.active === true ) && ( this.region.touching( entity ) === true ) ) {
+			if ( this.region.touching( entity ) === true ) {
 
 				this.execute( entity );
 
@@ -56831,13 +56817,18 @@
 		execute( /* entity */ ) {}
 
 		/**
-		* Triggers can have internal states. This method is called per simulation step
-		* and can be used to update the trigger.
+		* Updates the region of this trigger. Called by the {@link EntityManager} per
+		* simulation step.
 		*
-		* @param {Number} delta - The time delta value.
 		* @return {Trigger} A reference to this trigger.
 		*/
-		update( /* delta */ ) {}
+		updateRegion() {
+
+			this.region.update( this );
+
+			return this;
+
+		}
 
 		/**
 		* Transforms this instance into a JSON object.
@@ -56846,11 +56837,11 @@
 		*/
 		toJSON() {
 
-			return {
-				type: this.constructor.name,
-				active: this.active,
-				region: this.region.toJSON()
-			};
+			const json = super.toJSON();
+
+			json.region = this.region.toJSON();
+
+			return json;
 
 		}
 
@@ -56862,7 +56853,7 @@
 		*/
 		fromJSON( json ) {
 
-			this.active = json.active;
+			super.fromJSON( json );
 
 			const regionJSON = json.region;
 			let type = regionJSON.type;
@@ -56925,7 +56916,7 @@
 
 	/**
 	* This class is used for managing all central objects of a game like
-	* game entities and triggers.
+	* game entities.
 	*
 	* @author {@link https://github.com/Mugen87|Mugen87}
 	*/
@@ -56943,18 +56934,13 @@
 			this.entities = new Array();
 
 			/**
-			* A list of {@link Trigger triggers }.
-			* @type Array
-			*/
-			this.triggers = new Array();
-
-			/**
 			* A reference to a spatial index.
 			* @type CellSpacePartitioning
 			* @default null
 			*/
 			this.spatialIndex = null;
 
+			this._triggers = new Array(); // used to manage triggers
 			this._indexMap = new Map(); // used by spatial indices
 			this._typesMap = new Map(); // used for deserialization of custom entities
 			this._messageDispatcher = new MessageDispatcher();
@@ -56995,35 +56981,6 @@
 		}
 
 		/**
-		* Adds a trigger to this entity manager.
-		*
-		* @param {Trigger} trigger - The trigger to add.
-		* @return {EntityManager} A reference to this entity manager.
-		*/
-		addTrigger( trigger ) {
-
-			this.triggers.push( trigger );
-
-			return this;
-
-		}
-
-		/**
-		* Removes a trigger to this entity manager.
-		*
-		* @param {Trigger} trigger - The trigger to remove.
-		* @return {EntityManager} A reference to this entity manager.
-		*/
-		removeTrigger( trigger ) {
-
-			const index = this.triggers.indexOf( trigger );
-			this.triggers.splice( index, 1 );
-
-			return this;
-
-		}
-
-		/**
 		* Clears the internal state of this entity manager.
 		*
 		* @return {EntityManager} A reference to this entity manager.
@@ -57031,7 +56988,6 @@
 		clear() {
 
 			this.entities.length = 0;
-			this.triggers.length = 0;
 
 			this._messageDispatcher.clear();
 
@@ -57065,7 +57021,7 @@
 
 		/**
 		* The central update method of this entity manager. Updates all
-		* game entities, triggers and delayed messages.
+		* game entities and delayed messages.
 		*
 		* @param {Number} delta - The time delta.
 		* @return {EntityManager} A reference to this entity manager.
@@ -57073,7 +57029,7 @@
 		update( delta ) {
 
 			const entities = this.entities;
-			const triggers = this.triggers;
+			const triggers = this._triggers;
 
 			// update entities
 
@@ -57085,15 +57041,18 @@
 
 			}
 
-			// update triggers
+			// process triggers (this is done after the entity update to ensure
+			// up-to-date world matries)
 
 			for ( let i = ( triggers.length - 1 ); i >= 0; i -- ) {
 
 				const trigger = triggers[ i ];
 
-				this.updateTrigger( trigger, delta );
+				this.processTrigger( trigger );
 
 			}
+
+			this._triggers.length = 0; // reset
 
 			// handle messaging
 
@@ -57116,7 +57075,7 @@
 
 				this.updateNeighborhood( entity );
 
-				//
+				// check if start() should be executed
 
 				if ( entity._started === false ) {
 
@@ -57126,12 +57085,12 @@
 
 				}
 
-				//
+				// update entity
 
 				entity.update( delta );
 				entity.updateWorldMatrix();
 
-				//
+				// update children
 
 				const children = entity.children;
 
@@ -57143,7 +57102,15 @@
 
 				}
 
-				//
+				// if the entity is a trigger, save the reference for further processing
+
+				if ( entity instanceof Trigger ) {
+
+					this._triggers.push( entity );
+
+				}
+
+				// update spatial index
 
 				if ( this.spatialIndex !== null ) {
 
@@ -57153,7 +57120,7 @@
 
 				}
 
-				//
+				// update render component
 
 				const renderComponent = entity._renderComponent;
 				const renderComponentCallback = entity._renderComponentCallback;
@@ -57226,28 +57193,24 @@
 		}
 
 		/**
-		* Updates a single trigger.
+		* Processes a single trigger.
 		*
-		* @param {Trigger} trigger - The trigger to update.
+		* @param {Trigger} trigger - The trigger to process.
 		* @return {EntityManager} A reference to this entity manager.
 		*/
-		updateTrigger( trigger, delta ) {
+		processTrigger( trigger ) {
 
-			if ( trigger.active === true ) {
+			trigger.updateRegion(); // ensure its region is up-to-date
 
-				trigger.update( delta );
+			const entities = this.entities;
 
-				const entities = this.entities;
+			for ( let i = ( entities.length - 1 ); i >= 0; i -- ) {
 
-				for ( let i = ( entities.length - 1 ); i >= 0; i -- ) {
+				const entity = entities[ i ];
 
-					const entity = entities[ i ];
+				if ( trigger !== entity && entity.active === true && entity.canActivateTrigger === true ) {
 
-					if ( entity.active === true && entity.canAcitivateTrigger ) {
-
-						trigger.check( entity );
-
-					}
+					trigger.check( entity );
 
 				}
 
@@ -57285,7 +57248,6 @@
 			const data = {
 				type: this.constructor.name,
 				entities: new Array(),
-				triggers: new Array(),
 				_messageDispatcher: this._messageDispatcher.toJSON()
 			};
 
@@ -57311,15 +57273,6 @@
 
 			}
 
-			// triggers
-
-			for ( let i = 0, l = this.triggers.length; i < l; i ++ ) {
-
-				const trigger = this.triggers[ i ];
-				data.triggers.push( trigger.toJSON() );
-
-			}
-
 			return data;
 
 		}
@@ -57335,7 +57288,6 @@
 			this.clear();
 
 			const entitiesJSON = json.entities;
-			const triggersJSON = json.triggers;
 			const _messageDispatcherJSON = json._messageDispatcher;
 
 			// entities
@@ -57361,6 +57313,10 @@
 
 					case 'Vehicle':
 						entity = new Vehicle().fromJSON( entityJSON );
+						break;
+
+					case 'Trigger':
+						entity = new Trigger().fromJSON( entityJSON );
 						break;
 
 					default:
@@ -57396,42 +57352,6 @@
 
 			}
 
-			// triggers
-
-			for ( let i = 0, l = triggersJSON.length; i < l; i ++ ) {
-
-				const triggerJSON = triggersJSON[ i ];
-				const type = triggerJSON.type;
-
-				let trigger;
-
-				if ( type === 'Trigger' ) {
-
-					trigger = new Trigger().fromJSON( triggerJSON );
-
-				} else {
-
-					// handle custom type
-
-					const ctor = this._typesMap.get( type );
-
-					if ( ctor !== undefined ) {
-
-						trigger = new ctor().fromJSON( triggerJSON );
-
-					} else {
-
-						Logger.warn( 'YUKA.EntityManager: Unsupported trigger type:', type );
-						continue;
-
-					}
-
-				}
-
-				this.addTrigger( trigger );
-
-			}
-
 			// restore delayed messages
 
 			this._messageDispatcher.fromJSON( _messageDispatcherJSON );
@@ -57443,9 +57363,9 @@
 		/**
 		* Registers a custom type for deserialization. When calling {@link EntityManager#fromJSON}
 		* the entity manager is able to pick the correct constructor in order to create custom
-		* game entities or triggers.
+		* game entities.
 		*
-		* @param {String} type - The name of the entity or trigger type.
+		* @param {String} type - The name of the entity type.
 		* @param {Function} constructor - The constructor function.
 		* @return {EntityManager} A reference to this entity manager.
 		*/
@@ -57528,7 +57448,7 @@
 		* Returns true if the given event listener is set for the given event type.
 		*
 		* @param {String} type - The event type.
-		* @param {Function} listener - The event listener to add.
+		* @param {Function} listener - The event listener to test.
 		* @return {Boolean} Whether the given event listener is set for the given event type or not.
 		*/
 		hasEventListener( type, listener ) {
@@ -57782,31 +57702,22 @@
 		*/
 		constructor() {
 
-			/**
-			* The time stamp of the last simulation step in milliseconds.
-			* @type Number
-			* @default 0
-			*/
-			this.previousTime = 0;
+			this._previousTime = 0;
+			this._currentTime = 0;
 
-			/**
-			* The time stamp of the current simulation step in milliseconds.
-			* @type Number
-			*/
-			this.currentTime = this.now();
+			this._delta = 0;
+			this._elapsed = 0;
 
-			/**
-			* Whether the Page Visibility API should be used to avoid large time
-			* delta values produced via inactivity or not. This setting is
-			* ignored if the browser does not support the API.
-			* @type Boolean
-			* @default true
-			*/
-			this.detectPageVisibility = true;
+			this._timescale = 1;
 
-			//
+			this._useFixedDelta = false;
+			this._fixedDelta = 16.67; // ms, corresponds to approx. 60 FPS
 
-			if ( typeof document !== 'undefined' && document.hidden !== undefined ) {
+			// use Page Visibility API to avoid large time delta values
+
+			this._usePageVisibilityAPI = ( typeof document !== 'undefined' && document.hidden !== undefined );
+
+			if ( this._usePageVisibilityAPI === true ) {
 
 				this._pageVisibilityHandler = handleVisibilityChange.bind( this );
 
@@ -57814,59 +57725,170 @@
 
 			}
 
-			// private members
-
-			this._elapsedTime = 0;
-			this._deltaTime = 0;
-
 		}
 
 		/**
-		* Returns the delta time in seconds for the current simulation step.
+		* Disables the usage of a fixed delta value.
 		*
-		* @return {Number} The delta time in seconds.
+		* @return {Time} A reference to this time object.
 		*/
-		getDelta() {
+		disableFixedDelta() {
 
-			return this._deltaTime / 1000;
-
-		}
-
-		/**
-		* Returns the elapsed time in seconds of this timer. It's the accumulated
-		* value of all previous time deltas.
-		*
-		* @return {Number} The elapsed time in seconds.
-		*/
-		getElapsed() {
-
-			return this._elapsedTime / 1000;
-
-		}
-
-		/**
-		* Updates the internal state of this timer.
-		*
-		* @return {Time} A reference to this timer.
-		*/
-		update() {
-
-			this.previousTime = this.currentTime;
-			this.currentTime = this.now();
-
-			this._deltaTime = this.currentTime - this.previousTime;
-			this._elapsedTime += this._deltaTime;
+			this._useFixedDelta = false;
 
 			return this;
 
 		}
 
 		/**
-		* Returns a current time value in milliseconds.
+		* Frees all internal resources.
 		*
-		* @return {Number} A current time value in milliseconds.
+		* @return {Time} A reference to this time object.
 		*/
-		now() {
+		dispose() {
+
+			if ( this._usePageVisibilityAPI === true ) {
+
+				document.removeEventListener( 'visibilitychange', this._pageVisibilityHandler );
+
+			}
+
+			return this;
+
+		}
+
+		/**
+		* Enables the usage of a fixed delta value. Can be useful for debugging and testing.
+		*
+		* @return {Time} A reference to this time object.
+		*/
+		enableFixedDelta() {
+
+			this._useFixedDelta = true;
+
+			return this;
+
+		}
+
+		/**
+		* Returns the delta time in seconds. Represents the completion time in seconds since
+		* the last simulation step.
+		*
+		* @return {Number} The delta time in seconds.
+		*/
+		getDelta() {
+
+			return this._delta / 1000;
+
+		}
+
+		/**
+		* Returns the elapsed time in seconds. It's the accumulated
+		* value of all previous time deltas.
+		*
+		* @return {Number} The elapsed time in seconds.
+		*/
+		getElapsed() {
+
+			return this._elapsed / 1000;
+
+		}
+
+		/**
+		* Returns the fixed delta time in seconds.
+		*
+		* @return {Number} The fixed delta time in seconds.
+		*/
+		getFixedDelta() {
+
+			return this._fixedDelta / 1000;
+
+		}
+
+		/**
+		* Returns the timescale value.
+		*
+		* @return {Number} The timescale value.
+		*/
+		getTimescale() {
+
+			return this._timescale;
+
+		}
+
+		/**
+		* Resets this time object.
+		*
+		* @return {Time} A reference to this time object.
+		*/
+		reset() {
+
+			this._currentTime = this._now();
+
+			return this;
+
+		}
+
+		/**
+		* Sets a fixed time delta value.
+		*
+		* @param {Number} fixedDelta - Fixed time delta in seconds.
+		* @return {Time} A reference to this time object.
+		*/
+		setFixedDelta( fixedDelta ) {
+
+			this._fixedDelta = fixedDelta * 1000;
+
+			return this;
+
+		}
+
+		/**
+		* Sets a timescale value. This value represents the scale at which time passes.
+		* Can be used for slow down or  accelerate the simulation.
+		*
+		* @param {Number} timescale - The timescale value.
+		* @return {Time} A reference to this time object.
+		*/
+		setTimescale( timescale ) {
+
+			this._timescale = timescale;
+
+			return this;
+
+		}
+
+		/**
+		* Updates the internal state of this time object.
+		*
+		* @return {Time} A reference to this time object.
+		*/
+		update() {
+
+			if ( this._useFixedDelta === true ) {
+
+				this._delta = this._fixedDelta;
+
+			} else {
+
+				this._previousTime = this._currentTime;
+				this._currentTime = this._now();
+
+				this._delta = this._currentTime - this._previousTime;
+
+			}
+
+			this._delta *= this._timescale;
+
+			this._elapsed += this._delta; // _elapsed is the accumulation of all previous deltas
+
+			return this;
+
+		}
+
+		// private
+
+		_now() {
 
 			return ( typeof performance === 'undefined' ? Date : performance ).now();
 
@@ -57878,13 +57900,7 @@
 
 	function handleVisibilityChange() {
 
-		if ( this.detectPageVisibility === true && document.hidden === false ) {
-
-			// reset the current time when the app was inactive (window minimized or tab switched)
-
-			this.currentTime = this.now();
-
-		}
+		if ( document.hidden === false ) this.reset();
 
 	}
 
@@ -61207,6 +61223,13 @@
 
 			super();
 
+			/**
+			* Whether faces of the convex hull should be merged or not.
+			* @type Boolean
+			* @default true
+			*/
+			this.mergeFaces = true;
+
 			// tolerance value for various (float) compare operations
 
 			this._tolerance = - 1;
@@ -61219,10 +61242,6 @@
 
 			this._assigned = new VertexList();
 			this._unassigned = new VertexList();
-
-			// this array holds the new faces generated in a single iteration of the algorithm
-
-			this._newFaces = new Array();
 
 		}
 
@@ -61361,7 +61380,7 @@
 
 		_addNewFaces( vertex, horizon ) {
 
-			this._newFaces = [];
+			const newFaces = [];
 
 			let firstSideEdge = null;
 			let previousSideEdge = null;
@@ -61384,7 +61403,7 @@
 
 				}
 
-				this._newFaces.push( sideEdge.polygon );
+				newFaces.push( sideEdge.polygon );
 				previousSideEdge = sideEdge;
 
 			}
@@ -61393,7 +61412,7 @@
 
 			firstSideEdge.next.linkOpponent( previousSideEdge );
 
-			return this;
+			return newFaces;
 
 		}
 
@@ -61431,11 +61450,11 @@
 
 			this._computeHorizon( vertex.point, null, vertex.face, horizon );
 
-			this._addNewFaces( vertex, horizon );
+			const newFaces = this._addNewFaces( vertex, horizon );
 
 			// reassign 'unassigned' vertices to the new faces
 
-			this._resolveUnassignedPoints( this._newFaces );
+			this._resolveUnassignedPoints( newFaces );
 
 			return this;
 
@@ -61449,8 +61468,6 @@
 
 			this._assigned.clear();
 			this._unassigned.clear();
-
-			this._newFaces.length = 0;
 
 			return this;
 
@@ -61820,7 +61837,7 @@
 
 			this._updateFaces();
 
-			this._mergeFaces();
+			this._postprocessHull();
 
 			this._reset();
 
@@ -61828,92 +61845,100 @@
 
 		}
 
-		// merges faces if the result is still convex and coplanar
+		// final tasks after computing the hull
 
-		_mergeFaces() {
+		_postprocessHull() {
 
 			const faces = this.faces;
 			const edges = this.edges;
 
-			const cache = {
-				leftPrev: null,
-				leftNext: null,
-				rightPrev: null,
-				rightNext: null
-			};
+			if ( this.mergeFaces === true ) {
 
-			// gather unique edges and temporarily sort them
+				// merges faces if the result is still convex and coplanar
 
-			this.computeUniqueEdges();
+				const cache = {
+					leftPrev: null,
+					leftNext: null,
+					rightPrev: null,
+					rightNext: null
+				};
 
-			edges.sort( ( a, b ) => b.length() - a.length() );
+				// gather unique edges and temporarily sort them
 
-			// process edges from longest to shortest
+				this.computeUniqueEdges();
 
-			for ( let i = 0, l = edges.length; i < l; i ++ ) {
+				edges.sort( ( a, b ) => b.length() - a.length() );
 
-				const entry = edges[ i ];
+				// process edges from longest to shortest
 
-				let candidate = entry;
+				for ( let i = 0, l = edges.length; i < l; i ++ ) {
 
-				// cache current references for possible restore
+					const entry = edges[ i ];
 
-				cache.prev = candidate.prev;
-				cache.next = candidate.next;
-				cache.prevTwin = candidate.twin.prev;
-				cache.nextTwin = candidate.twin.next;
+					if ( this._mergePossible( entry ) === false ) continue;
 
-				// temporarily change the first polygon in order to represent both polygons
+					let candidate = entry;
 
-				candidate.prev.next = candidate.twin.next;
-				candidate.next.prev = candidate.twin.prev;
-				candidate.twin.prev.next = candidate.next;
-				candidate.twin.next.prev = candidate.prev;
+					// cache current references for possible restore
 
-				const polygon = candidate.polygon;
-				polygon.edge = candidate.prev;
+					cache.prev = candidate.prev;
+					cache.next = candidate.next;
+					cache.prevTwin = candidate.twin.prev;
+					cache.nextTwin = candidate.twin.next;
 
-				const ccw = polygon.plane.normal.dot( up ) >= 0;
+					// temporarily change the first polygon in order to represent both polygons
 
-				if ( polygon.convex( ccw ) === true && polygon.coplanar( this._tolerance ) === true ) {
+					candidate.prev.next = candidate.twin.next;
+					candidate.next.prev = candidate.twin.prev;
+					candidate.twin.prev.next = candidate.next;
+					candidate.twin.next.prev = candidate.prev;
 
-					// correct polygon reference of all edges
+					const polygon = candidate.polygon;
+					polygon.edge = candidate.prev;
 
-					let edge = polygon.edge;
+					const ccw = polygon.plane.normal.dot( up ) >= 0;
 
-					do {
+					if ( polygon.convex( ccw ) === true && polygon.coplanar( this._tolerance ) === true ) {
 
-						edge.polygon = polygon;
+						// correct polygon reference of all edges
 
-						edge = edge.next;
+						let edge = polygon.edge;
 
-					} while ( edge !== polygon.edge );
+						do {
 
-					// delete obsolete polygon
+							edge.polygon = polygon;
 
-					const index = faces.indexOf( entry.twin.polygon );
-					faces.splice( index, 1 );
+							edge = edge.next;
 
-				} else {
+						} while ( edge !== polygon.edge );
 
-					// restore
+						// delete obsolete polygon
 
-					cache.prev.next = candidate;
-					cache.next.prev = candidate;
-					cache.prevTwin.next = candidate.twin;
-					cache.nextTwin.prev = candidate.twin;
+						const index = faces.indexOf( entry.twin.polygon );
+						faces.splice( index, 1 );
 
-					polygon.edge = candidate;
+					} else {
+
+						// restore
+
+						cache.prev.next = candidate;
+						cache.next.prev = candidate;
+						cache.prevTwin.next = candidate.twin;
+						cache.nextTwin.prev = candidate.twin;
+
+						polygon.edge = candidate;
+
+					}
 
 				}
 
-			}
+				// recompute centroid of faces
 
-			// recompute centroid of faces
+				for ( let i = 0, l = faces.length; i < l; i ++ ) {
 
-			for ( let i = 0, l = faces.length; i < l; i ++ ) {
+					faces[ i ].computeCentroid();
 
-				faces[ i ].computeCentroid();
+				}
 
 			}
 
@@ -61924,6 +61949,28 @@
 			this.computeUniqueVertices();
 
 			return this;
+
+		}
+
+		// checks if the given edge can be used to merge convex regions
+
+		_mergePossible( edge ) {
+
+			const polygon = edge.polygon;
+			let currentEdge = edge.twin;
+
+			do {
+
+				// we can only use an edge to merge two regions if the adjacent region does not have any edges
+				// apart from edge.twin already connected to the region.
+
+				if ( currentEdge !== edge.twin && currentEdge.twin.polygon === polygon ) return false;
+
+				currentEdge = currentEdge.next;
+
+			} while ( edge.twin !== currentEdge );
+
+			return true;
 
 		}
 
@@ -66435,7 +66482,7 @@
 
 				this.ui.menu.classList.add( 'hidden' );
 
-				this.time.currentTime = this.time.now();
+				this.time.reset();
 
 				this._startAnimation();
 

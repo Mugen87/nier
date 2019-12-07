@@ -34,6 +34,6 @@
   },
   "dependencies": {
     "three": "0.110.0",
-    "yuka": "0.0.3"
+    "yuka": "0.3.0"
   }
 }

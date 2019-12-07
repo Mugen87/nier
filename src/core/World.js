@@ -516,7 +516,7 @@ class World {
 
 			this.ui.menu.classList.add( 'hidden' );
 
-			this.time.currentTime = this.time.now();
+			this.time.reset();
 
 			this._startAnimation();
 
