@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "rollup -c \"config/rollup/config.js\"",
-    "build-prod": "rollup -c \"config/rollup/config.js\" && google-closure-compiler-js build/bundle.js > build/bundle.min.js",
+    "build-prod": "rollup -c \"config/rollup/config.js\" && google-closure-compiler build/bundle.js > build/bundle.min.js",
     "dev": "concurrently \"rollup -c \"config/rollup/config.js\" -w\" \"serve\"",
     "lint": "eslint src --ext .js",
     "start": "npm run dev"
