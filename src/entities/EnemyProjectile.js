@@ -24,7 +24,6 @@ class EnemyProjectile extends Projectile {
 		this.velocity.copy( direction ).multiplyScalar( this.maxSpeed );
 		this.position.copy( this.owner.position );
 		this.position.y = 0.4; // slightly raise the projectile
-		this.updateWorldMatrix();
 
 		target.copy( this.position ).add( this.velocity );
 		this.lookAt( target ); // ensure GameEntity.rotation is up to date

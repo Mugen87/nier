@@ -434,7 +434,7 @@ class World {
 
 		this.renderer = new THREE.WebGLRenderer( { antialias: true } );
 		this.renderer.setSize( window.innerWidth, window.innerHeight );
-		this.renderer.gammaOutput = true;
+		this.renderer.outputEncoding = THREE.sRGBEncoding;
 		this.renderer.shadowMap.enabled = true;
 		this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 		document.body.appendChild( this.renderer.domElement );
